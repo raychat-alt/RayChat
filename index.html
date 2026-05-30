@@ -3,879 +3,386 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RayChat – Messaging App</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>RayChat</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0c10;
-    --surface: #12151c;
-    --surface2: #1a1e28;
-    --border: #232838;
-    --accent: #00e5c8;
-    --accent2: #6c63ff;
-    --text: #e8eaf0;
-    --muted: #6b7280;
-    --sent: #00b5a0;
-    --received: #1e2232;
-    --danger: #ff5c6b;
-    --online: #22c55e;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* AUTH SCREEN */
-  #auth-screen {
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .auth-bg {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 60% 50% at 70% 20%, rgba(0,229,200,0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 60% at 20% 80%, rgba(108,99,255,0.12) 0%, transparent 60%);
-  }
-
-  .auth-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(35,40,56,0.5) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(35,40,56,0.5) 1px, transparent 1px);
-    background-size: 40px 40px;
-    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
-  }
-
-  .auth-card {
-    position: relative;
-    width: 420px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 48px 40px;
-    box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,229,200,0.05);
-    animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
-  }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .auth-logo {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 36px;
-  }
-
-  .logo-icon {
-    width: 44px; height: 44px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-  }
-
-  .logo-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
-
-  .logo-name span { color: var(--accent); }
-
-  .auth-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .auth-sub {
-    color: var(--muted);
-    font-size: 14px;
-    margin-bottom: 32px;
-  }
-
-  .tabs {
-    display: flex;
-    background: var(--surface2);
-    border-radius: 12px;
-    padding: 4px;
-    margin-bottom: 28px;
-    gap: 4px;
-  }
-
-  .tab {
-    flex: 1; padding: 10px;
-    background: transparent;
-    border: none;
-    border-radius: 9px;
-    color: var(--muted);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .tab.active {
-    background: var(--accent);
-    color: #000;
-    font-weight: 700;
-  }
-
-  .form-group { margin-bottom: 16px; }
-
-  .form-group label {
-    display: block;
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 8px;
-    font-weight: 500;
-  }
-
-  .form-group input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .form-group input:focus { border-color: var(--accent); }
-  .form-group input::placeholder { color: var(--muted); }
-
-  .btn-primary {
-    width: 100%;
-    padding: 15px;
-    background: linear-gradient(135deg, var(--accent), #00b5a0);
-    border: none;
-    border-radius: 12px;
-    color: #000;
-    font-family: 'Syne', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: opacity 0.2s, transform 0.1s;
-    letter-spacing: 0.3px;
-  }
-
-  .btn-primary:hover { opacity: 0.9; }
-  .btn-primary:active { transform: scale(0.98); }
-
-  .error-msg {
-    color: var(--danger);
-    font-size: 13px;
-    margin-top: 12px;
-    text-align: center;
-    min-height: 18px;
-  }
-
-  /* FIREBASE NOTICE */
-  .firebase-notice {
-    background: rgba(108,99,255,0.1);
-    border: 1px solid rgba(108,99,255,0.3);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 24px;
-    font-size: 13px;
-    color: #a89fff;
-    line-height: 1.5;
-  }
-
-  .firebase-notice strong { color: var(--accent2); }
-
-  /* MAIN APP */
-  #app-screen {
-    display: none;
-    width: 100vw;
-    height: 100vh;
-  }
-
-  .app-layout {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    height: 100vh;
-  }
-
-  /* SIDEBAR */
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .sidebar-header {
-    padding: 24px 20px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .sidebar-logo {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
-
-  .sidebar-logo span { color: var(--accent); }
-
-  .header-actions { display: flex; gap: 8px; }
-
-  .icon-btn {
-    width: 36px; height: 36px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--muted);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    transition: all 0.2s;
-  }
-
-  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
-
-  .search-box {
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .search-box input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    outline: none;
-  }
-
-  .search-box input::placeholder { color: var(--muted); }
-  .search-box input:focus { border-color: var(--accent); }
-
-  .user-info {
-    padding: 12px 20px;
-    background: rgba(0,229,200,0.04);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .user-info .avatar {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-    color: #000;
-    flex-shrink: 0;
-  }
-
-  .user-info .name {
-    font-size: 14px;
-    font-weight: 600;
-    flex: 1;
-  }
-
-  .user-info .email {
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .logout-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 16px;
-    padding: 4px;
-    transition: color 0.2s;
-  }
-
-  .logout-btn:hover { color: var(--danger); }
-
-  .new-chat-section {
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .new-chat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-
-  .new-chat-input-row {
-    display: flex; gap: 8px;
-  }
-
-  .new-chat-input-row input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 9px 12px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    outline: none;
-  }
-
-  .new-chat-input-row input:focus { border-color: var(--accent); }
-  .new-chat-input-row input::placeholder { color: var(--muted); }
-
-  .new-chat-btn {
-    padding: 9px 14px;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    color: #000;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.2s;
-  }
-
-  .new-chat-btn:hover { opacity: 0.85; }
-
-  .chats-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
-  }
-
-  .chats-list::-webkit-scrollbar { width: 4px; }
-  .chats-list::-webkit-scrollbar-track { background: transparent; }
-  .chats-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .chat-item {
-    padding: 12px 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: background 0.15s;
-    border-radius: 0;
-  }
-
-  .chat-item:hover { background: var(--surface2); }
-  .chat-item.active { background: rgba(0,229,200,0.07); border-right: 3px solid var(--accent); }
-
-  .chat-avatar {
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent2), #9c63ff);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-    flex-shrink: 0;
-    position: relative;
-  }
-
-  .online-dot {
-    position: absolute;
-    bottom: 2px; right: 2px;
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--online);
-    border: 2px solid var(--surface);
-  }
-
-  .chat-info { flex: 1; min-width: 0; }
-
-  .chat-name {
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .chat-preview {
-    font-size: 13px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 2px;
-  }
-
-  .chat-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-  }
-
-  .chat-time { font-size: 11px; color: var(--muted); }
-
-  .unread-badge {
-    background: var(--accent);
-    color: #000;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 10px;
-    padding: 2px 7px;
-    min-width: 18px;
-    text-align: center;
-  }
-
-  .empty-chats {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 14px;
-  }
-
-  /* CHAT AREA */
-  .chat-area {
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    overflow: hidden;
-  }
-
-  .chat-header {
-    padding: 18px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .chat-header-avatar {
-    width: 42px; height: 42px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent2), #9c63ff);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px;
-    font-weight: 700;
-    color: #fff;
-    flex-shrink: 0;
-  }
-
-  .chat-header-info { flex: 1; }
-
-  .chat-header-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  .chat-header-status { font-size: 12px; color: var(--online); }
-
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .chat-messages::-webkit-scrollbar { width: 4px; }
-  .chat-messages::-webkit-scrollbar-track { background: transparent; }
-  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .msg-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    animation: msgIn 0.2s ease both;
-  }
-
-  @keyframes msgIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .msg-row.sent { flex-direction: row-reverse; }
-
-  .msg-avatar {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent2), #9c63ff);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: #fff;
-    flex-shrink: 0;
-  }
-
-  .msg-bubble {
-    max-width: 65%;
-    padding: 12px 16px;
-    border-radius: 18px;
-    font-size: 14.5px;
-    line-height: 1.5;
-    position: relative;
-  }
-
-  .msg-row.sent .msg-bubble {
-    background: linear-gradient(135deg, var(--accent), #00b5a0);
-    color: #000;
-    border-bottom-right-radius: 4px;
-  }
-
-  .msg-row.received .msg-bubble {
-    background: var(--received);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-  }
-
-  .msg-time {
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 4px;
-    padding: 0 4px;
-  }
-
-  .msg-row.sent .msg-time { text-align: right; }
-
-  .msg-wrapper { display: flex; flex-direction: column; }
-  .msg-row.sent .msg-wrapper { align-items: flex-end; }
-
-  .typing-indicator {
-    display: flex; gap: 4px;
-    padding: 12px 16px;
-    background: var(--received);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    border-bottom-left-radius: 4px;
-    width: fit-content;
-    display: none;
-  }
-
-  .typing-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--muted);
-    animation: typingBounce 1.2s infinite;
-  }
-
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes typingBounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-6px); }
-  }
-
-  .chat-input-area {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .chat-input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 13px 18px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    outline: none;
-    resize: none;
-    height: 48px;
-    max-height: 120px;
-    line-height: 1.4;
-    transition: border-color 0.2s;
-  }
-
-  .chat-input:focus { border-color: var(--accent); }
-  .chat-input::placeholder { color: var(--muted); }
-
-  .send-btn {
-    width: 48px; height: 48px;
-    background: linear-gradient(135deg, var(--accent), #00b5a0);
-    border: none;
-    border-radius: 14px;
-    color: #000;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity 0.2s, transform 0.1s;
-    flex-shrink: 0;
-  }
-
-  .send-btn:hover { opacity: 0.9; }
-  .send-btn:active { transform: scale(0.93); }
-
-  .empty-chat-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    color: var(--muted);
-  }
-
-  .empty-icon {
-    width: 72px; height: 72px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px;
-  }
-
-  .empty-chat-state h3 {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px;
-    color: var(--text);
-    font-weight: 700;
-  }
-
-  .empty-chat-state p { font-size: 14px; }
-
-  /* Date separator */
-  .date-sep {
-    text-align: center;
-    font-size: 12px;
-    color: var(--muted);
-    margin: 8px 0;
-    position: relative;
-  }
-
-  .date-sep::before, .date-sep::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 30%;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .date-sep::before { left: 0; }
-  .date-sep::after { right: 0; }
-
-  /* Loading state */
-  .loading-overlay {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    gap: 16px;
-    transition: opacity 0.3s;
-  }
-
-  .loading-spinner {
-    width: 44px; height: 44px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .loading-text {
-    font-family: 'Syne', sans-serif;
-    font-size: 14px;
-    color: var(--muted);
-    letter-spacing: 1px;
-  }
-
-  /* Demo mode banner */
-  .demo-banner {
-    background: rgba(108,99,255,0.12);
-    border-bottom: 1px solid rgba(108,99,255,0.25);
-    padding: 10px 20px;
-    font-size: 13px;
-    color: #a89fff;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .demo-banner strong { color: var(--accent2); }
-
-  @media (max-width: 700px) {
-    .app-layout { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
-    .sidebar.mobile-show { display: flex; position: fixed; inset: 0; z-index: 100; }
-    .auth-card { width: 95vw; padding: 32px 24px; }
-  }
+:root {
+  --bg: #080a0f;
+  --surface: #0e1118;
+  --surface2: #161b26;
+  --surface3: #1e2436;
+  --border: #1f2637;
+  --border2: #2a3348;
+  --accent: #00e5c8;
+  --accent-dim: rgba(0,229,200,0.12);
+  --accent2: #6c63ff;
+  --text: #e2e8f4;
+  --text2: #8b95a8;
+  --sent-bg: linear-gradient(135deg,#00c9b1,#00a896);
+  --recv-bg: #161b26;
+  --danger: #ff4d6d;
+  --online: #22c55e;
+  --warn: #f59e0b;
+  --radius: 16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:none;z-index:10;}
+.screen.active{display:flex;}
+
+/* ── LOADING ── */
+#s-loading{align-items:center;justify-content:center;flex-direction:column;gap:20px;background:var(--bg);}
+.load-logo{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:-1px;}
+.load-logo span{color:var(--accent);}
+.load-bar{width:180px;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.load-bar-inner{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;animation:loadbar 2s ease forwards;}
+@keyframes loadbar{to{width:100%;}}
+
+/* ── AUTH ── */
+#s-auth{align-items:center;justify-content:center;background:var(--bg);}
+.auth-bg{position:absolute;inset:0;background:
+  radial-gradient(ellipse 55% 45% at 75% 15%,rgba(0,229,200,.1) 0%,transparent 60%),
+  radial-gradient(ellipse 45% 55% at 15% 85%,rgba(108,99,255,.1) 0%,transparent 60%);}
+.auth-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(31,38,55,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(31,38,55,.4) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,black 30%,transparent 80%);}
+.auth-card{position:relative;width:420px;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:44px 40px;box-shadow:0 32px 80px rgba(0,0,0,.6);}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.auth-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px;}
+.auth-logo-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.5px;}
+.auth-logo-name span{color:var(--accent);}
+.auth-tabs{display:flex;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:28px;gap:3px;}
+.auth-tab{flex:1;padding:10px;background:transparent;border:none;border-radius:9px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+.auth-tab.active{background:var(--accent);color:#000;font-weight:700;}
+.auth-form-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:6px;}
+.auth-form-sub{color:var(--text2);font-size:13px;margin-bottom:26px;}
+.field{margin-bottom:15px;}
+.field label{display:block;font-size:12px;color:var(--text2);font-weight:500;margin-bottom:7px;letter-spacing:.3px;}
+.field input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:13px 15px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.field input:focus{border-color:var(--accent);}
+.field input::placeholder{color:var(--text2);}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px;margin-top:6px;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#00b5a0);color:#000;}
+.btn-primary:hover{opacity:.9;}
+.btn-primary:active{transform:scale(.98);}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border2);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:rgba(255,77,109,.1);color:var(--danger);border:1px solid rgba(255,77,109,.25);}
+.btn-danger:hover{background:rgba(255,77,109,.2);}
+.err{color:var(--danger);font-size:12.5px;margin-top:10px;text-align:center;min-height:16px;}
+
+/* ── SETUP NAME ── */
+#s-setup-name,#s-setup-profile{align-items:center;justify-content:center;background:var(--bg);}
+.setup-card{position:relative;width:440px;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:48px 44px;box-shadow:0 32px 80px rgba(0,0,0,.5);}
+.setup-step{font-size:12px;color:var(--accent);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
+.setup-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px;}
+.setup-sub{color:var(--text2);font-size:14px;margin-bottom:32px;line-height:1.6;}
+.setup-progress{display:flex;gap:6px;margin-bottom:36px;}
+.sp-dot{height:4px;flex:1;border-radius:2px;background:var(--surface3);}
+.sp-dot.done{background:var(--accent);}
+.sp-dot.active{background:linear-gradient(90deg,var(--accent),var(--accent2));}
+
+/* ── SETUP PROFILE ── */
+.avatar-picker{display:flex;flex-direction:column;align-items:center;gap:16px;margin-bottom:28px;}
+.avatar-preview{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),#9c63ff);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#fff;position:relative;cursor:pointer;border:3px solid var(--border2);transition:border-color .2s;}
+.avatar-preview:hover{border-color:var(--accent);}
+.avatar-edit-badge{position:absolute;bottom:2px;right:2px;width:24px;height:24px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#000;}
+.avatar-emojis{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.av-emoji{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.av-emoji:hover,.av-emoji.sel{background:var(--accent-dim);border-color:var(--accent);}
+.color-row{display:flex;gap:8px;margin-top:8px;}
+.av-color{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.av-color:hover,.av-color.sel{border-color:#fff;transform:scale(1.15);}
+.bio-field textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 15px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;height:80px;transition:border-color .2s;}
+.bio-field textarea:focus{border-color:var(--accent);}
+.bio-field textarea::placeholder{color:var(--text2);}
+.skip-link{text-align:center;margin-top:14px;font-size:13px;color:var(--text2);cursor:pointer;}
+.skip-link span{color:var(--accent);text-decoration:underline;}
+
+/* ── MAIN APP ── */
+#s-app{background:var(--bg);}
+.app-layout{display:grid;grid-template-columns:300px 1fr;height:100vh;width:100%;}
+
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-top{padding:20px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.s-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.4px;}
+.s-logo span{color:var(--accent);}
+.s-top-actions{display:flex;gap:6px;}
+.icon-btn{width:34px;height:34px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent);}
+.sidebar-me{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s;}
+.sidebar-me:hover{background:var(--surface2);}
+.me-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;position:relative;}
+.me-online{position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--online);border:2px solid var(--surface);}
+.me-info{flex:1;min-width:0;}
+.me-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.me-tag{font-size:11px;color:var(--accent);font-weight:500;}
+.search-wrap{padding:10px 14px;border-bottom:1px solid var(--border);}
+.search-wrap input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--accent);}
+.search-wrap input::placeholder{color:var(--text2);}
+.new-chat-panel{padding:10px 14px;border-bottom:1px solid var(--border);display:none;}
+.new-chat-panel.open{display:block;}
+.ncp-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:7px;}
+.ncp-row{display:flex;gap:7px;}
+.ncp-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;}
+.ncp-row input:focus{border-color:var(--accent);}
+.ncp-row input::placeholder{color:var(--text2);}
+.ncp-btn{padding:9px 14px;background:var(--accent);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.ncp-btn:hover{opacity:.85;}
+.chats-section{flex:1;overflow-y:auto;padding:6px 0;}
+.chats-section::-webkit-scrollbar{width:3px;}
+.chats-section::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.chat-row{padding:11px 16px;cursor:pointer;display:flex;align-items:center;gap:11px;transition:background .15s;position:relative;}
+.chat-row:hover{background:var(--surface2);}
+.chat-row.active{background:var(--accent-dim);border-right:2px solid var(--accent);}
+.cr-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative;}
+.cr-online{position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--online);border:2px solid var(--surface);}
+.cr-info{flex:1;min-width:0;}
+.cr-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cr-preview{font-size:12.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.cr-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.cr-time{font-size:11px;color:var(--text2);}
+.cr-badge{background:var(--accent);color:#000;font-size:10px;font-weight:700;border-radius:10px;padding:2px 6px;}
+.empty-list{padding:40px 20px;text-align:center;color:var(--text2);font-size:13px;line-height:1.7;}
+
+/* CHAT AREA */
+.chat-area{display:flex;flex-direction:column;overflow:hidden;}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text2);}
+.chat-empty-icon{width:68px;height:68px;background:var(--surface);border:1px solid var(--border);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.chat-empty h3{font-family:'Syne',sans-serif;font-size:18px;color:var(--text);font-weight:700;}
+.chat-empty p{font-size:13px;}
+.chat-head{padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:13px;}
+.ch-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.ch-info{flex:1;}
+.ch-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.ch-status{font-size:12px;color:var(--online);}
+.messages{flex:1;overflow-y:auto;padding:22px 22px 10px;}
+.messages::-webkit-scrollbar{width:3px;}
+.messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.date-sep{text-align:center;font-size:11px;color:var(--text2);margin:14px 0;position:relative;}
+.date-sep::before,.date-sep::after{content:'';position:absolute;top:50%;height:1px;background:var(--border);width:35%;}
+.date-sep::before{left:0;} .date-sep::after{right:0;}
+.msg-row{display:flex;align-items:flex-end;gap:7px;margin-bottom:4px;animation:msgIn .18s ease both;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.msg-row.sent{flex-direction:row-reverse;}
+.msg-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.msg-wrap{display:flex;flex-direction:column;}
+.msg-row.sent .msg-wrap{align-items:flex-end;}
+.msg-bubble{max-width:380px;padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.55;word-break:break-word;}
+.msg-row.sent .msg-bubble{background:var(--sent-bg);color:#000;border-bottom-right-radius:5px;}
+.msg-row.received .msg-bubble{background:var(--recv-bg);color:var(--text);border:1px solid var(--border2);border-bottom-left-radius:5px;}
+.msg-time{font-size:10px;color:var(--text2);margin-top:3px;padding:0 3px;}
+.chat-input-row{padding:14px 18px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;}
+.msg-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:13px;padding:12px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;height:46px;max-height:120px;transition:border-color .2s;line-height:1.4;}
+.msg-input:focus{border-color:var(--accent);}
+.msg-input::placeholder{color:var(--text2);}
+.send-btn{width:46px;height:46px;background:linear-gradient(135deg,var(--accent),#00b5a0);border:none;border-radius:13px;color:#000;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s,transform .1s;}
+.send-btn:hover{opacity:.9;}
+.send-btn:active{transform:scale(.93);}
+
+/* ── PROFILE SCREEN ── */
+#s-profile{align-items:center;justify-content:center;background:rgba(8,10,15,.85);backdrop-filter:blur(8px);z-index:50;}
+.profile-card{width:400px;background:var(--surface);border:1px solid var(--border);border-radius:24px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.6);}
+.profile-header{padding:32px 28px 24px;background:linear-gradient(160deg,rgba(0,229,200,.06),rgba(108,99,255,.06));border-bottom:1px solid var(--border);text-align:center;position:relative;}
+.profile-close{position:absolute;top:16px;right:16px;width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.profile-close:hover{color:var(--danger);}
+.profile-av-big{width:80px;height:80px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:34px;border:3px solid var(--border2);}
+.profile-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;}
+.profile-email{font-size:13px;color:var(--text2);margin-bottom:8px;}
+.profile-bio{font-size:13px;color:var(--text2);font-style:italic;line-height:1.5;}
+.profile-tag{display:inline-block;background:var(--accent-dim);color:var(--accent);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:8px;}
+.profile-actions{padding:20px 24px;display:flex;flex-direction:column;gap:10px;}
+.profile-action-btn{width:100%;padding:13px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);transition:all .2s;}
+.profile-action-btn:hover{border-color:var(--border2);background:var(--surface3);}
+.profile-action-btn.danger{color:var(--danger);border-color:rgba(255,77,109,.2);}
+.profile-action-btn.danger:hover{background:rgba(255,77,109,.08);}
+.profile-action-btn.warn{color:var(--warn);border-color:rgba(245,158,11,.2);}
+.profile-action-btn.warn:hover{background:rgba(245,158,11,.06);}
+.pab-icon{font-size:17px;}
+
+/* ── AVATAR UTILITY ── */
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+
+@media(max-width:680px){
+  .app-layout{grid-template-columns:1fr;}
+  .sidebar{position:fixed;inset:0;z-index:100;transform:translateX(-100%);transition:transform .3s;}
+  .sidebar.open{transform:translateX(0);}
+  .auth-card,.setup-card,.profile-card{width:95vw;padding:32px 22px;}
+}
 </style>
 </head>
 <body>
 
-<!-- Loading -->
-<div class="loading-overlay" id="loading">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">RAYCHAT</div>
+<!-- ══ LOADING ══ -->
+<div class="screen active" id="s-loading">
+  <div class="load-logo">Ray<span>Chat</span></div>
+  <div class="load-bar"><div class="load-bar-inner"></div></div>
 </div>
 
-<!-- Auth Screen -->
-<div id="auth-screen">
+<!-- ══ AUTH ══ -->
+<div class="screen" id="s-auth">
   <div class="auth-bg"></div>
   <div class="auth-grid"></div>
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-icon">💬</div>
-      <div class="logo-name">Ray<span>Chat</span></div>
+      <div class="auth-logo-icon">💬</div>
+      <div class="auth-logo-name">Ray<span>Chat</span></div>
     </div>
-
-    <div class="firebase-notice">
-      <strong>⚙️ Setup Required:</strong> To use real messaging, paste your <strong>Firebase config</strong> in the <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;">FIREBASE_CONFIG</code> variable in the script. Currently running in <strong>demo mode</strong>.
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="authTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="authTab('register')">Create Account</button>
     </div>
-
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('login')">Sign In</button>
-      <button class="tab" onclick="switchTab('register')">Create Account</button>
+    <!-- Login -->
+    <div id="af-login">
+      <div class="auth-form-title">Welcome back 👋</div>
+      <div class="auth-form-sub">Sign in to continue</div>
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In →</button>
     </div>
-
-    <div id="login-form">
-      <div class="auth-title">Welcome back</div>
-      <div class="auth-sub">Sign in to continue chatting</div>
-      <div class="form-group">
-        <label>Email address</label>
-        <input type="email" id="login-email" placeholder="you@example.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="login-password" placeholder="••••••••">
-      </div>
-      <button class="btn-primary" onclick="handleLogin()">Sign In →</button>
+    <!-- Register -->
+    <div id="af-reg" style="display:none">
+      <div class="auth-form-title">Join RayChat 🚀</div>
+      <div class="auth-form-sub">Create your account</div>
+      <div class="field"><label>Email</label><input type="email" id="r-email" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="r-pass" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')doRegister()"></div>
+      <button class="btn btn-primary" onclick="doRegister()">Create Account →</button>
     </div>
-
-    <div id="register-form" style="display:none">
-      <div class="auth-title">Create account</div>
-      <div class="auth-sub">Join RayChat and start messaging</div>
-      <div class="form-group">
-        <label>Display name</label>
-        <input type="text" id="reg-name" placeholder="Your name">
-      </div>
-      <div class="form-group">
-        <label>Email address</label>
-        <input type="email" id="reg-email" placeholder="you@example.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="reg-password" placeholder="At least 6 characters">
-      </div>
-      <button class="btn-primary" onclick="handleRegister()">Create Account →</button>
-    </div>
-
-    <div class="error-msg" id="auth-error"></div>
+    <div class="err" id="auth-err"></div>
   </div>
 </div>
 
-<!-- Main App -->
-<div id="app-screen">
+<!-- ══ SETUP: NAME ══ -->
+<div class="screen" id="s-setup-name">
+  <div class="auth-bg"></div>
+  <div class="setup-card">
+    <div class="setup-progress">
+      <div class="sp-dot active"></div>
+      <div class="sp-dot"></div>
+    </div>
+    <div class="setup-step">Step 1 of 2</div>
+    <div class="setup-title">What's your name?</div>
+    <div class="setup-sub">This is how people will see you on RayChat. You can change it later.</div>
+    <div class="field"><label>Display Name</label><input type="text" id="sn-name" placeholder="e.g. Rahmat Talukdar" onkeydown="if(event.key==='Enter')doSetupName()"></div>
+    <button class="btn btn-primary" onclick="doSetupName()">Continue →</button>
+    <div class="err" id="sn-err"></div>
+  </div>
+</div>
+
+<!-- ══ SETUP: PROFILE ══ -->
+<div class="screen" id="s-setup-profile">
+  <div class="auth-bg"></div>
+  <div class="setup-card">
+    <div class="setup-progress">
+      <div class="sp-dot done"></div>
+      <div class="sp-dot active"></div>
+    </div>
+    <div class="setup-step">Step 2 of 2</div>
+    <div class="setup-title">Set up your profile</div>
+    <div class="setup-sub">Pick an avatar and write a short bio. You can skip this step.</div>
+    <div class="avatar-picker">
+      <div class="avatar-preview" id="av-preview" style="background:linear-gradient(135deg,#6c63ff,#9c63ff)">😎<div class="avatar-edit-badge">✏️</div></div>
+      <div class="avatar-emojis" id="av-emojis"></div>
+      <div class="color-row" id="av-colors"></div>
+    </div>
+    <div class="bio-field field"><label>Bio (optional)</label><textarea id="sp-bio" placeholder="Tell people a little about yourself..."></textarea></div>
+    <button class="btn btn-primary" onclick="doSetupProfile()">Finish Setup →</button>
+    <div class="skip-link" onclick="doSetupProfile(true)">Skip for now <span>→</span></div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div class="screen" id="s-app">
   <div class="app-layout">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-      <div class="demo-banner">
-        <span>🔮</span>
-        <span><strong>Demo Mode</strong> — Add Firebase config for real messaging</span>
-      </div>
-      <div class="sidebar-header">
-        <div class="sidebar-logo">Ray<span>Chat</span></div>
-        <div class="header-actions">
+      <div class="sidebar-top">
+        <div class="s-logo">Ray<span>Chat</span></div>
+        <div class="s-top-actions">
           <button class="icon-btn" onclick="toggleNewChat()" title="New Chat">✏️</button>
         </div>
       </div>
-      <div class="user-info" id="user-info">
-        <div class="avatar" id="user-avatar">?</div>
-        <div>
-          <div class="name" id="user-display-name">User</div>
-          <div class="email" id="user-email-display"></div>
+      <!-- My profile row -->
+      <div class="sidebar-me" onclick="openProfile()">
+        <div class="me-avatar av" id="me-av" style="background:linear-gradient(135deg,#6c63ff,#9c63ff);width:38px;height:38px;font-size:17px;">😎<div class="me-online"></div></div>
+        <div class="me-info">
+          <div class="me-name" id="me-name">You</div>
+          <div class="me-tag">● My Profile</div>
         </div>
-        <button class="logout-btn" onclick="handleLogout()" title="Sign out">⏻</button>
+        <span style="color:var(--text2);font-size:13px;">›</span>
       </div>
-      <div class="new-chat-section" id="new-chat-section" style="display:none">
-        <div class="new-chat-label">Start new chat</div>
-        <div class="new-chat-input-row">
-          <input type="email" id="new-chat-email" placeholder="Enter email address...">
-          <button class="new-chat-btn" onclick="startNewChat()">Chat</button>
+      <!-- New chat panel -->
+      <div class="new-chat-panel" id="ncp">
+        <div class="ncp-label">Start New Chat</div>
+        <div class="ncp-row">
+          <input type="email" id="ncp-email" placeholder="Enter their email...">
+          <button class="ncp-btn" onclick="startChat()">Chat</button>
         </div>
+        <div class="err" id="ncp-err" style="text-align:left;margin-top:6px;"></div>
       </div>
-      <div class="search-box">
-        <input type="text" placeholder="🔍  Search conversations..." id="search-input" oninput="filterChats()">
+      <!-- Search -->
+      <div class="search-wrap">
+        <input type="text" placeholder="🔍  Search chats..." oninput="filterChats(this.value)">
       </div>
-      <div class="chats-list" id="chats-list">
-        <div class="empty-chats">No conversations yet.<br>Start a new chat above!</div>
+      <!-- Chats list -->
+      <div class="chats-section" id="chats-list">
+        <div class="empty-list">No conversations yet.<br>Tap ✏️ to start chatting!</div>
       </div>
     </div>
 
     <!-- Chat Area -->
-    <div class="chat-area" id="chat-area">
-      <div class="empty-chat-state" id="empty-state">
-        <div class="empty-icon">💬</div>
-        <h3>Select a conversation</h3>
-        <p>Pick a chat from the sidebar or start a new one</p>
+    <div class="chat-area">
+      <div class="chat-empty" id="chat-empty">
+        <div class="chat-empty-icon">💬</div>
+        <h3>Select a chat</h3>
+        <p>Choose a conversation or start a new one</p>
       </div>
-      <div id="active-chat" style="display:none; flex-direction:column; height:100%;">
-        <div class="chat-header">
-          <div class="chat-header-avatar" id="ch-avatar">?</div>
-          <div class="chat-header-info">
-            <div class="chat-header-name" id="ch-name">Chat</div>
-            <div class="chat-header-status">● Online</div>
+      <div id="chat-main" style="display:none;flex-direction:column;height:100%;">
+        <div class="chat-head">
+          <div class="ch-avatar av" id="ch-av" style="width:40px;height:40px;font-size:17px;background:linear-gradient(135deg,#6c63ff,#9c63ff)">?</div>
+          <div class="ch-info">
+            <div class="ch-name" id="ch-name">Chat</div>
+            <div class="ch-status">● Online</div>
           </div>
         </div>
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-area">
-          <textarea class="chat-input" id="msg-input" placeholder="Type a message..." rows="1"
-            onkeydown="handleMsgKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="send-btn" onclick="sendMessage()">➤</button>
+        <div class="messages" id="messages"></div>
+        <div class="chat-input-row">
+          <textarea class="msg-input" id="msg-input" placeholder="Type a message..." rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+          <button class="send-btn" onclick="sendMsg()">➤</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Firebase SDKs -->
+<!-- ══ PROFILE MODAL ══ -->
+<div class="screen" id="s-profile">
+  <div class="profile-card">
+    <div class="profile-header">
+      <button class="profile-close" onclick="closeProfile()">✕</button>
+      <div class="profile-av-big av" id="pf-av" style="background:linear-gradient(135deg,#6c63ff,#9c63ff)">😎</div>
+      <div class="profile-name" id="pf-name">Your Name</div>
+      <div class="profile-email" id="pf-email">email@example.com</div>
+      <div class="profile-bio" id="pf-bio"></div>
+      <div class="profile-tag">🟢 Online</div>
+    </div>
+    <div class="profile-actions">
+      <button class="profile-action-btn" onclick="goEditProfile()"><span class="pab-icon">✏️</span> Edit Profile</button>
+      <button class="profile-action-btn warn" onclick="doSwitchAccount()"><span class="pab-icon">🔄</span> Switch Account</button>
+      <button class="profile-action-btn danger" onclick="doLogout()"><span class="pab-icon">⏻</span> Log Out</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
-// ============================================================
-// FIREBASE IMPORTS (must be at top of module)
-// ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          signOut, onAuthStateChanged, updateProfile }
@@ -884,374 +391,288 @@ import { getDatabase, ref, set, get, push, onValue, off,
          query as dbQuery, orderByChild, limitToLast, update }
          from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
-// ============================================================
-// FIREBASE CONFIGURATION
-// ============================================================
-const FIREBASE_CONFIG = {
+// ── CONFIG ──
+const FB = {
   apiKey: "AIzaSyAlMwQT4d68D6A6xaQ1_EgB01G9Q6nEeKQ",
   authDomain: "raychat-91527.firebaseapp.com",
   databaseURL: "https://raychat-91527-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "raychat-91527",
   storageBucket: "raychat-91527.firebasestorage.app",
   messagingSenderId: "422943843087",
-  appId: "1:422943843087:web:9ff2e95fe56e09d56c147a",
-  measurementId: "G-WDD8ZCFV39"
+  appId: "1:422943843087:web:9ff2e95fe56e09d56c147a"
 };
 
-// ============================================================
-// APP STATE
-// ============================================================
-let currentUser = null;
-let currentChatId = null;
-let currentChatListener = null;
+const app = initializeApp(FB);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// ── STATE ──
+let ME = null;
+let activeChatId = null;
+let msgListener = null;
 let chatsListener = null;
 
-// Hide loading
-function hideLoading() {
-  const l = document.getElementById('loading');
-  l.style.opacity = '0';
-  setTimeout(() => l.style.display = 'none', 300);
+const EMOJIS = ['😎','😊','🔥','⚡','🌙','🎯','👾','🦋','🐉','🌊','🎭','🚀'];
+const COLORS = ['linear-gradient(135deg,#6c63ff,#9c63ff)','linear-gradient(135deg,#00e5c8,#00a896)',
+                'linear-gradient(135deg,#ff6b6b,#ee5a24)','linear-gradient(135deg,#f9ca24,#f0932b)',
+                'linear-gradient(135deg,#6ab04c,#badc58)','linear-gradient(135deg,#e84393,#a855f7)'];
+let chosenEmoji = '😎';
+let chosenColor = COLORS[0];
+
+// ── UTILS ──
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'):''; }
+function chatId(a,b){ return [a,b].sort().join('_'); }
+function fmtTime(ts){
+  if(!ts)return'';
+  const d=new Date(ts),n=new Date();
+  return d.toDateString()===n.toDateString()?d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
+function avatarStyle(u){ return `background:${u?.color||COLORS[0]}`; }
+function avatarContent(u){ return u?.emoji||'😎'; }
 
-// Safety fallback — if Firebase takes too long, show auth anyway
-const loadingFallback = setTimeout(() => {
-  hideLoading();
-  showAuth();
-}, 6000);
+// ── AVATAR PICKER INIT ──
+function initAvatarPicker(){
+  const ee=document.getElementById('av-emojis');
+  ee.innerHTML=EMOJIS.map(e=>`<div class="av-emoji${e===chosenEmoji?' sel':''}" onclick="pickEmoji('${e}')">${e}</div>`).join('');
+  const cc=document.getElementById('av-colors');
+  cc.innerHTML=COLORS.map((c,i)=>`<div class="av-color${c===chosenColor?' sel':''}" style="background:${c}" onclick="pickColor(${i})"></div>`).join('');
+}
+window.pickEmoji=e=>{chosenEmoji=e;document.getElementById('av-preview').innerHTML=e+'<div class="avatar-edit-badge">✏️</div>';document.querySelectorAll('.av-emoji').forEach(el=>el.classList.toggle('sel',el.textContent===e));};
+window.pickColor=i=>{chosenColor=COLORS[i];document.getElementById('av-preview').style.background=COLORS[i];document.querySelectorAll('.av-color').forEach((el,j)=>el.classList.toggle('sel',j===i));};
 
-// ============================================================
-// FIREBASE INIT
-// ============================================================
-let app, auth, db;
-try {
-  app = initializeApp(FIREBASE_CONFIG);
-  auth = getAuth(app);
-  db = getDatabase(app);
-
-  // Auth state listener
-  onAuthStateChanged(auth, async (user) => {
-    clearTimeout(loadingFallback);
-    hideLoading();
-    if (user) {
-      currentUser = user;
-      try {
-        await set(ref(db, `users/${user.uid}`), {
-          uid: user.uid,
-          name: user.displayName || user.email.split('@')[0],
-          email: user.email
-        });
-      } catch(e) { console.warn('Could not save user profile:', e); }
-      showApp(user);
-      listenChats(user);
+// ── LOADING ──
+const fallback=setTimeout(()=>show('s-auth'),7000);
+onAuthStateChanged(auth,async user=>{
+  clearTimeout(fallback);
+  if(user){
+    const snap=await get(ref(db,`users/${user.uid}`));
+    const data=snap.val();
+    if(!data||!data.name){
+      show('s-setup-name');
     } else {
-      currentUser = null;
-      if (chatsListener) { off(chatsListener); chatsListener = null; }
-      showAuth();
+      ME=data;
+      enterApp();
     }
-  });
-} catch(e) {
-  console.error('Firebase init error:', e);
-  clearTimeout(loadingFallback);
-  hideLoading();
-  showAuth();
-  setTimeout(() => {
-    document.getElementById('auth-error').textContent = 'Firebase connection failed. Check console for details.';
-  }, 500);
+  } else {
+    show('s-auth');
+  }
+});
+
+// ── AUTH ──
+window.authTab=tab=>{
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0)===(tab==='login')));
+  document.getElementById('af-login').style.display=tab==='login'?'block':'none';
+  document.getElementById('af-reg').style.display=tab==='register'?'block':'none';
+  document.getElementById('auth-err').textContent='';
+};
+window.doLogin=async()=>{
+  const email=document.getElementById('l-email').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  const err=document.getElementById('auth-err');
+  if(!email||!pass){err.textContent='Please fill in all fields.';return;}
+  try{ await signInWithEmailAndPassword(auth,email,pass); }
+  catch(e){ err.textContent=e.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim(); }
+};
+window.doRegister=async()=>{
+  const email=document.getElementById('r-email').value.trim();
+  const pass=document.getElementById('r-pass').value;
+  const err=document.getElementById('auth-err');
+  if(!email||!pass){err.textContent='Please fill in all fields.';return;}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';return;}
+  try{ await createUserWithEmailAndPassword(auth,email,pass); }
+  catch(e){ err.textContent=e.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim(); }
+};
+
+// ── SETUP NAME ──
+window.doSetupName=async()=>{
+  const name=document.getElementById('sn-name').value.trim();
+  if(!name){document.getElementById('sn-err').textContent='Please enter your name.';return;}
+  const user=auth.currentUser;
+  await updateProfile(user,{displayName:name});
+  await set(ref(db,`users/${user.uid}`),{uid:user.uid,email:user.email,name,emoji:'😎',color:COLORS[0],bio:''});
+  initAvatarPicker();
+  show('s-setup-profile');
+};
+
+// ── SETUP PROFILE ──
+window.doSetupProfile=async(skip=false)=>{
+  const user=auth.currentUser;
+  const bio=skip?'':document.getElementById('sp-bio').value.trim();
+  const emoji=skip?'😎':chosenEmoji;
+  const color=skip?COLORS[0]:chosenColor;
+  await update(ref(db,`users/${user.uid}`),{emoji,color,bio});
+  const snap=await get(ref(db,`users/${user.uid}`));
+  ME=snap.val();
+  enterApp();
+};
+
+// ── ENTER APP ──
+function enterApp(){
+  // Set sidebar profile
+  const avEl=document.getElementById('me-av');
+  avEl.style.background=ME.color||COLORS[0];
+  avEl.textContent=ME.emoji||'😎';
+  // Re-add online dot
+  const dot=document.createElement('div');dot.className='me-online';avEl.appendChild(dot);
+  document.getElementById('me-name').textContent=ME.name||'You';
+  show('s-app');
+  listenChats();
 }
 
-// ============================================================
-// AUTH FUNCTIONS
-// ============================================================
-window.switchTab = (tab) => {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0) === (tab==='login')));
-  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-  document.getElementById('auth-error').textContent = '';
+// ── PROFILE MODAL ──
+window.openProfile=()=>{
+  document.getElementById('pf-av').style.background=ME.color||COLORS[0];
+  document.getElementById('pf-av').textContent=ME.emoji||'😎';
+  document.getElementById('pf-name').textContent=ME.name||'User';
+  document.getElementById('pf-email').textContent=ME.email||'';
+  document.getElementById('pf-bio').textContent=ME.bio||'';
+  show('s-profile');
 };
-
-window.handleLogin = async () => {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-password').value;
-  const errEl = document.getElementById('auth-error');
-  errEl.textContent = '';
-  if (!email || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) {
-    errEl.textContent = e.message.replace('Firebase: ', '').replace(/\(.*\)/, '').trim();
-  }
+window.closeProfile=()=>show('s-app');
+window.goEditProfile=()=>{
+  chosenEmoji=ME.emoji||'😎';
+  chosenColor=ME.color||COLORS[0];
+  initAvatarPicker();
+  document.getElementById('sp-bio').value=ME.bio||'';
+  document.getElementById('av-preview').textContent=chosenEmoji;
+  document.getElementById('av-preview').innerHTML=chosenEmoji+'<div class="avatar-edit-badge">✏️</div>';
+  document.getElementById('av-preview').style.background=chosenColor;
+  show('s-setup-profile');
 };
-
-window.handleRegister = async () => {
-  const name = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const pass = document.getElementById('reg-password').value;
-  const errEl = document.getElementById('auth-error');
-  errEl.textContent = '';
-  if (!name || !email || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
-  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
-  try {
-    const { user } = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(user, { displayName: name });
-  } catch(e) {
-    errEl.textContent = e.message.replace('Firebase: ', '').replace(/\(.*\)/, '').trim();
-  }
-};
-
-window.handleLogout = async () => {
-  if (currentChatListener) { off(currentChatListener); currentChatListener = null; }
+window.doSwitchAccount=async()=>{
+  if(msgListener){off(msgListener);msgListener=null;}
+  if(chatsListener){off(chatsListener);chatsListener=null;}
+  ME=null; activeChatId=null;
   await signOut(auth);
+  show('s-auth');
+};
+window.doLogout=async()=>{
+  if(msgListener){off(msgListener);msgListener=null;}
+  if(chatsListener){off(chatsListener);chatsListener=null;}
+  ME=null; activeChatId=null;
+  await signOut(auth);
+  show('s-auth');
 };
 
-// ============================================================
-// SHOW/HIDE SCREENS
-// ============================================================
-function showAuth() {
-  document.getElementById('auth-screen').style.display = 'flex';
-  document.getElementById('app-screen').style.display = 'none';
-  currentChatId = null;
-}
-
-function showApp(user) {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app-screen').style.display = 'block';
-  // Hide demo banner
-  document.querySelectorAll('.demo-banner').forEach(el => el.style.display = 'none');
-  // Hide firebase notice
-  document.querySelector('.firebase-notice')?.remove();
-  const initials = (user.displayName || user.email || '?')[0].toUpperCase();
-  document.getElementById('user-avatar').textContent = initials;
-  document.getElementById('user-display-name').textContent = user.displayName || user.email.split('@')[0];
-  document.getElementById('user-email-display').textContent = user.email || '';
-}
-
-// ============================================================
-// REALTIME DATABASE — CHAT LOGIC
-// ============================================================
-
-// Generate consistent chat ID from two UIDs
-function getChatId(uid1, uid2) {
-  return [uid1, uid2].sort().join('_');
-}
-
-// Listen to all chats for current user
-function listenChats(user) {
-  const chatsRef = ref(db, `userChats/${user.uid}`);
-  chatsListener = chatsRef;
-  onValue(chatsRef, (snap) => {
-    const data = snap.val() || {};
-    const chats = Object.values(data).sort((a,b) => (b.lastTime||0) - (a.lastTime||0));
-    renderChatList(chats);
+// ── CHATS ──
+function listenChats(){
+  const r=ref(db,`userChats/${ME.uid}`);
+  chatsListener=r;
+  onValue(r,snap=>{
+    const data=snap.val()||{};
+    const list=Object.values(data).sort((a,b)=>(b.lastTime||0)-(a.lastTime||0));
+    renderChats(list);
   });
 }
 
-function renderChatList(chats) {
-  const list = document.getElementById('chats-list');
-  if (!chats || chats.length === 0) {
-    list.innerHTML = '<div class="empty-chats">No conversations yet.<br>Start a new chat above!</div>';
-    return;
-  }
-  list.innerHTML = chats.map(c => `
-    <div class="chat-item ${currentChatId === c.chatId ? 'active' : ''}" onclick="openChat('${c.chatId}', '${escapeAttr(c.otherName)}', '${escapeAttr(c.otherEmail)}')">
-      <div class="chat-avatar">
-        ${(c.otherName||'?')[0].toUpperCase()}
-        <div class="online-dot"></div>
+function renderChats(list){
+  const el=document.getElementById('chats-list');
+  if(!list.length){el.innerHTML='<div class="empty-list">No conversations yet.<br>Tap ✏️ to start chatting!</div>';return;}
+  el.innerHTML=list.map(c=>`
+    <div class="chat-row${activeChatId===c.chatId?' active':''}" onclick="openChat('${c.chatId}','${esc(c.otherName)}','${esc(c.otherEmoji||'😎')}','${encodeURIComponent(c.otherColor||COLORS[0])}')">
+      <div class="cr-avatar av" style="width:42px;height:42px;font-size:18px;background:${c.otherColor||COLORS[0]}">${c.otherEmoji||'😎'}<div class="cr-online"></div></div>
+      <div class="cr-info">
+        <div class="cr-name">${esc(c.otherName||c.otherEmail)}</div>
+        <div class="cr-preview">${esc(c.lastMsg||'Start chatting...')}</div>
       </div>
-      <div class="chat-info">
-        <div class="chat-name">${escapeHtml(c.otherName || c.otherEmail)}</div>
-        <div class="chat-preview">${escapeHtml(c.lastMsg || 'Start chatting...')}</div>
-      </div>
-      <div class="chat-meta">
-        <div class="chat-time">${formatTime(c.lastTime)}</div>
-      </div>
+      <div class="cr-meta"><div class="cr-time">${fmtTime(c.lastTime)}</div></div>
     </div>
   `).join('');
 }
 
-window.openChat = (chatId, otherName, otherEmail) => {
-  // Remove old message listener
-  if (currentChatListener) { off(currentChatListener); currentChatListener = null; }
-
-  currentChatId = chatId;
-  document.getElementById('empty-state').style.display = 'none';
-  const activeChat = document.getElementById('active-chat');
-  activeChat.style.display = 'flex';
-
-  document.getElementById('ch-avatar').textContent = (otherName||'?')[0].toUpperCase();
-  document.getElementById('ch-name').textContent = otherName || otherEmail;
-
-  // Listen to messages in real-time
-  const msgsRef = dbQuery(ref(db, `messages/${chatId}`), orderByChild('time'), limitToLast(100));
-  currentChatListener = msgsRef;
-  onValue(msgsRef, (snap) => {
-    const data = snap.val() || {};
-    const msgs = Object.values(data).sort((a,b) => a.time - b.time);
-    renderMessages(msgs);
-  });
-
-  // Update active state in sidebar
-  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.chat-item').forEach(el => {
-    if (el.onclick?.toString().includes(chatId)) el.classList.add('active');
+window.filterChats=q=>{
+  document.querySelectorAll('.chat-row').forEach(el=>{
+    el.style.display=el.querySelector('.cr-name')?.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
   });
 };
 
-function renderMessages(msgs) {
-  const el = document.getElementById('chat-messages');
-  el.innerHTML = '';
+window.toggleNewChat=()=>{
+  const p=document.getElementById('ncp');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))document.getElementById('ncp-email').focus();
+  document.getElementById('ncp-err').textContent='';
+};
 
-  if (!msgs || msgs.length === 0) {
-    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:14px;padding:40px">No messages yet. Say hi! 👋</div>';
-    return;
-  }
+window.startChat=async()=>{
+  const email=document.getElementById('ncp-email').value.trim().toLowerCase();
+  const errEl=document.getElementById('ncp-err');
+  errEl.textContent='';
+  if(!email){errEl.textContent='Enter an email.';return;}
+  if(email===ME.email){errEl.textContent='That\'s your own email!';return;}
+  // Find user by email
+  const snap=await get(ref(db,'users'));
+  const all=snap.val()||{};
+  const found=Object.values(all).find(u=>u.email===email);
+  if(!found){errEl.textContent='No user found with that email. They need to sign up first.';return;}
+  const cid=chatId(ME.uid,found.uid);
+  // Create chat entries for both
+  await update(ref(db,`userChats/${ME.uid}/${cid}`),{chatId:cid,otherUid:found.uid,otherName:found.name,otherEmail:found.email,otherEmoji:found.emoji||'😎',otherColor:found.color||COLORS[0],lastMsg:'',lastTime:Date.now()});
+  await update(ref(db,`userChats/${found.uid}/${cid}`),{chatId:cid,otherUid:ME.uid,otherName:ME.name,otherEmail:ME.email,otherEmoji:ME.emoji||'😎',otherColor:ME.color||COLORS[0],lastMsg:'',lastTime:Date.now()});
+  document.getElementById('ncp-email').value='';
+  document.getElementById('ncp').classList.remove('open');
+  openChat(cid,found.name,found.emoji||'😎',encodeURIComponent(found.color||COLORS[0]));
+};
 
-  let lastDate = null;
-  msgs.forEach(m => {
-    const d = new Date(m.time).toDateString();
-    if (d !== lastDate) {
-      el.innerHTML += `<div class="date-sep">${d === new Date().toDateString() ? 'Today' : d}</div>`;
-      lastDate = d;
-    }
-    const isSent = m.senderId === currentUser.uid;
-    const avatarInitial = m.senderName ? m.senderName[0].toUpperCase() : '?';
-    el.innerHTML += `
-      <div class="msg-row ${isSent ? 'sent' : 'received'}">
-        ${!isSent ? `<div class="msg-avatar">${avatarInitial}</div>` : ''}
-        <div class="msg-wrapper">
-          <div class="msg-bubble">${escapeHtml(m.text)}</div>
-          <div class="msg-time">${formatTime(m.time)}</div>
-        </div>
+window.openChat=(cid,name,emoji,colorEnc)=>{
+  const color=decodeURIComponent(colorEnc||'');
+  activeChatId=cid;
+  document.getElementById('chat-empty').style.display='none';
+  const cm=document.getElementById('chat-main');
+  cm.style.display='flex';
+  const av=document.getElementById('ch-av');
+  av.style.background=color||COLORS[0];
+  av.textContent=emoji||'😎';
+  document.getElementById('ch-name').textContent=name||'Chat';
+  // Messages listener
+  if(msgListener){off(msgListener);msgListener=null;}
+  const mRef=dbQuery(ref(db,`messages/${cid}`),orderByChild('time'),limitToLast(100));
+  msgListener=mRef;
+  onValue(mRef,snap=>{
+    const data=snap.val()||{};
+    renderMsgs(Object.values(data).sort((a,b)=>a.time-b.time));
+  });
+  // Mark active
+  document.querySelectorAll('.chat-row').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.chat-row').forEach(el=>{if(el.onclick?.toString().includes(cid))el.classList.add('active');});
+};
+
+function renderMsgs(msgs){
+  const el=document.getElementById('messages');
+  if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">No messages yet. Say hi! 👋</div>';return;}
+  let lastDate='';
+  el.innerHTML=msgs.map(m=>{
+    const d=new Date(m.time).toDateString();
+    const sep=d!==lastDate?`<div class="date-sep">${d===new Date().toDateString()?'Today':d}</div>`:'';
+    lastDate=d;
+    const sent=m.senderId===ME.uid;
+    return `${sep}<div class="msg-row ${sent?'sent':'received'}">
+      ${!sent?`<div class="msg-av av" style="width:26px;height:26px;font-size:11px;background:${m.senderColor||COLORS[0]}">${m.senderEmoji||'😎'}</div>`:''}
+      <div class="msg-wrap">
+        <div class="msg-bubble">${esc(m.text)}</div>
+        <div class="msg-time">${fmtTime(m.time)}</div>
       </div>
-    `;
-  });
-  el.scrollTop = el.scrollHeight;
+    </div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
 }
 
-window.sendMessage = async () => {
-  const input = document.getElementById('msg-input');
-  const text = input.value.trim();
-  if (!text || !currentChatId || !currentUser) return;
-
-  input.value = '';
-  input.style.height = 'auto';
-
-  const msgData = {
-    text,
-    senderId: currentUser.uid,
-    senderName: currentUser.displayName || currentUser.email.split('@')[0],
-    time: Date.now()
-  };
-
-  // Push message
-  await push(ref(db, `messages/${currentChatId}`), msgData);
-
-  // Update last message for both users in userChats
-  const parts = currentChatId.split('_');
-  for (const uid of parts) {
-    const otherUid = parts.find(p => p !== uid) || parts[1];
-    // Get other user's name
-    let otherName = '';
-    if (uid === currentUser.uid) {
-      const otherSnap = await get(ref(db, `users/${otherUid}`));
-      otherName = otherSnap.val()?.name || otherSnap.val()?.email || 'User';
-    } else {
-      otherName = currentUser.displayName || currentUser.email.split('@')[0];
-    }
-    await update(ref(db, `userChats/${uid}/${currentChatId}`), {
-      chatId: currentChatId,
-      otherUid,
-      otherName,
-      lastMsg: text,
-      lastTime: Date.now()
-    });
+window.sendMsg=async()=>{
+  const inp=document.getElementById('msg-input');
+  const text=inp.value.trim();
+  if(!text||!activeChatId||!ME)return;
+  inp.value='';inp.style.height='auto';
+  const msg={text,senderId:ME.uid,senderName:ME.name,senderEmoji:ME.emoji||'😎',senderColor:ME.color||COLORS[0],time:Date.now()};
+  await push(ref(db,`messages/${activeChatId}`),msg);
+  // Update both users' chat previews
+  const parts=activeChatId.split('_');
+  for(const uid of parts){
+    await update(ref(db,`userChats/${uid}/${activeChatId}`),{lastMsg:text,lastTime:Date.now()});
   }
 };
 
-window.toggleNewChat = () => {
-  const s = document.getElementById('new-chat-section');
-  s.style.display = s.style.display === 'none' ? 'block' : 'none';
-};
-
-window.startNewChat = async () => {
-  const emailInput = document.getElementById('new-chat-email');
-  const email = emailInput.value.trim().toLowerCase();
-  if (!email || email === currentUser.email) return;
-
-  // Search for user by email in database
-  const usersSnap = await get(ref(db, 'users'));
-  const usersData = usersSnap.val() || {};
-  const foundUser = Object.values(usersData).find(u => u.email === email);
-
-  let otherUid, otherName, otherEmail;
-
-  if (foundUser) {
-    otherUid = foundUser.uid;
-    otherName = foundUser.name || email.split('@')[0];
-    otherEmail = foundUser.email;
-  } else {
-    document.getElementById('auth-error') && (document.getElementById('auth-error').textContent = '');
-    // Show error under input
-    alert(`No user found with email: ${email}\nThey need to create an account first.`);
-    return;
-  }
-
-  const chatId = getChatId(currentUser.uid, otherUid);
-  emailInput.value = '';
-  document.getElementById('new-chat-section').style.display = 'none';
-
-  // Create chat entry for both users
-  await update(ref(db, `userChats/${currentUser.uid}/${chatId}`), {
-    chatId, otherUid, otherName, otherEmail, lastMsg: '', lastTime: Date.now()
-  });
-  await update(ref(db, `userChats/${otherUid}/${chatId}`), {
-    chatId, otherUid: currentUser.uid,
-    otherName: currentUser.displayName || currentUser.email.split('@')[0],
-    otherEmail: currentUser.email,
-    lastMsg: '', lastTime: Date.now()
-  });
-
-  openChat(chatId, otherName, otherEmail);
-};
-
-window.filterChats = () => {
-  const q = document.getElementById('search-input').value.toLowerCase();
-  document.querySelectorAll('.chat-item').forEach(item => {
-    const name = item.querySelector('.chat-name')?.textContent.toLowerCase() || '';
-    item.style.display = name.includes(q) ? '' : 'none';
-  });
-};
-
-window.handleMsgKey = (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-};
-
-window.autoResize = (el) => {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-};
-
-// ============================================================
-// HELPERS
-// ============================================================
-function formatTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-}
-
-function escapeHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-}
-
-function escapeAttr(s) {
-  if (!s) return '';
-  return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-}
+// init avatar picker on load
+initAvatarPicker();
 </script>
 </body>
 </html>

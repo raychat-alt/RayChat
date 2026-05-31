@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>RayChat</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Firebase Compat (regular script, no module issues) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <style>
 :root{
   --bg:#080a0f;--surface:#0e1118;--surface2:#161b26;--surface3:#1e2436;
@@ -20,7 +24,6 @@ html,body{height:100%;overflow:hidden;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;}
 button{cursor:pointer;font-family:'DM Sans',sans-serif;}
 input,textarea{font-family:'DM Sans',sans-serif;}
-
 .screen{position:fixed;inset:0;display:none;z-index:10;}
 .screen.active{display:flex;}
 
@@ -53,7 +56,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .errtxt{color:var(--danger);font-size:12px;margin-top:9px;min-height:16px;text-align:center;}
 
 /* SETUP */
-#s-name,#s-profile{align-items:center;justify-content:center;background:var(--bg);}
+#s-name,#s-pf{align-items:center;justify-content:center;background:var(--bg);}
 .scard{position:relative;width:440px;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:44px 42px;box-shadow:0 24px 60px rgba(0,0,0,.5);}
 .sprog{display:flex;gap:6px;margin-bottom:28px;}
 .spdot{height:4px;flex:1;border-radius:2px;background:var(--surface3);}
@@ -77,24 +80,21 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .skiplink{text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;}
 .skiplink span{color:var(--accent);}
 
-/* APP - Desktop: two-column | Mobile: full screen toggle */
+/* APP */
 #s-app{background:var(--bg);}
-
-/* DESKTOP layout */
 .layout{width:100%;height:100vh;display:flex;}
-.sb{width:300px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+.sb{width:300px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100vh;transition:transform .28s cubic-bezier(.4,0,.2,1);}
 .ca{flex:1;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
 
 /* SIDEBAR */
 .sb-top{padding:16px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .sb-logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;}
 .sb-logo span{color:var(--accent);}
-.sb-acts{display:flex;gap:6px;}
-.ib{width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;border:none;}
+.ib{width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;}
 .ib:hover{color:var(--accent);}
 .sb-me{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .15s;flex-shrink:0;}
 .sb-me:hover{background:var(--surface2);}
-.meav{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;position:relative;}
+.meav{border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
 .medot{position:absolute;bottom:1px;right:1px;width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid var(--surface);}
 .meinfo{flex:1;min-width:0;}
 .mename{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -109,7 +109,6 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .ncpgo{padding:8px 13px;background:var(--accent);border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;}
 .sb-search{padding:9px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;}
-.sb-search input:focus{border-color:var(--accent);}
 .sb-search input::placeholder{color:var(--muted);}
 .chatlist{flex:1;overflow-y:auto;padding:4px 0;}
 .chatlist::-webkit-scrollbar{width:3px;}
@@ -125,13 +124,12 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .crtime{font-size:10px;color:var(--muted);flex-shrink:0;}
 .emptylist{padding:36px 18px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7;}
 
-/* CHAT AREA */
+/* CHAT */
 .caempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);}
 .caempty-ic{width:64px;height:64px;background:var(--surface);border:1px solid var(--border);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;}
 .caempty h3{font-family:'Syne',sans-serif;font-size:17px;color:var(--text);font-weight:700;}
 .chhead{padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:11px;flex-shrink:0;}
 .chav{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;cursor:pointer;}
-.chav:hover{opacity:.8;}
 .chinfo{flex:1;cursor:pointer;}
 .chname{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
 .chst{font-size:11px;color:var(--green);}
@@ -165,9 +163,9 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .msgta{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;resize:none;height:44px;max-height:110px;transition:border-color .2s;line-height:1.4;}
 .msgta:focus{border-color:var(--accent);}
 .msgta::placeholder{color:var(--muted);}
-.sendbtn{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#00b5a0);border:none;border-radius:12px;color:#000;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;}
+.sendbtn{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#00b5a0);border:none;border-radius:12px;color:#000;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .sendbtn:active{opacity:.8;}
-.micbtn{width:44px;height:44px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;user-select:none;-webkit-user-select:none;}
+.micbtn{width:44px;height:44px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none;-webkit-user-select:none;transition:all .2s;}
 .micbtn.rec{background:var(--danger);border-color:var(--danger);color:#fff;animation:pmb .6s ease infinite;}
 @keyframes pmb{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
 .rechint{font-size:11px;color:var(--danger);text-align:center;padding:3px 0 0;display:none;flex-shrink:0;}
@@ -193,7 +191,6 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .pab.warn{color:var(--warn);border-color:rgba(245,158,11,.2);}
 .pab.warn:hover{background:rgba(245,158,11,.06);}
 .callwith{width:100%;padding:12px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--accent),#00b5a0);color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
-/* Incoming call */
 .callincard{padding:36px 28px;text-align:center;}
 .callav{width:78px;height:78px;border-radius:50%;margin:0 auto 13px;display:flex;align-items:center;justify-content:center;font-size:32px;animation:rng 1.2s ease infinite;}
 @keyframes rng{0%,100%{box-shadow:0 0 0 0 rgba(0,229,200,.4);}50%{box-shadow:0 0 0 16px rgba(0,229,200,0);}}
@@ -202,7 +199,6 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .callinbtns{display:flex;gap:16px;justify-content:center;}
 .calacc{width:58px;height:58px;border-radius:50%;border:none;background:var(--green);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;}
 .calrej{width:58px;height:58px;border-radius:50%;border:none;background:var(--danger);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;}
-/* Active call */
 .callvids{position:relative;background:#000;height:200px;}
 #vr{width:100%;height:100%;object-fit:cover;display:none;}
 .callph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;background:var(--surface2);}
@@ -219,23 +215,19 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .ccbtn.vid.off{background:var(--surface3);color:var(--muted);}
 .ccbtn.end{background:var(--danger);color:#fff;}
 
-/* ── MOBILE ── */
+/* MOBILE */
+.mobback{display:none;width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--muted);align-items:center;justify-content:center;font-size:15px;margin-right:4px;}
 @media(max-width:700px){
   .layout{position:relative;}
-  /* Sidebar takes full screen on mobile */
-  .sb{position:absolute;inset:0;width:100%;z-index:10;transform:translateX(0);transition:transform .28s cubic-bezier(.4,0,.2,1);}
-  /* When chat is open, sidebar slides left */
+  .sb{position:absolute;inset:0;width:100%;z-index:10;}
   .sb.hide{transform:translateX(-100%);}
-  /* Chat area takes full screen */
   .ca{position:absolute;inset:0;width:100%;z-index:5;}
-  /* Back button shows on mobile */
   .mobback{display:flex !important;}
   .acard,.scard{width:94vw;padding:30px 22px;}
   .mbub{max-width:78vw;}
   .moverlay{align-items:flex-end;padding:0;}
   .mcard{border-radius:22px 22px 0 0;max-width:100%;}
 }
-.mobback{display:none;width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--muted);align-items:center;justify-content:center;font-size:15px;margin-right:4px;}
 </style>
 </head>
 <body>
@@ -252,22 +244,22 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   <div class="acard">
     <div class="a-logo"><div class="a-logo-ic">💬</div><div class="a-logo-nm">Ray<span>Chat</span></div></div>
     <div class="atabs">
-      <button class="atab on" onclick="atab('login')">Sign In</button>
-      <button class="atab" onclick="atab('reg')">Create Account</button>
+      <button class="atab on" id="tab-login" onclick="atab('login')">Sign In</button>
+      <button class="atab" id="tab-reg" onclick="atab('reg')">Create Account</button>
     </div>
     <div id="af-l">
       <div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;margin-bottom:5px">Welcome back 👋</div>
       <div style="color:var(--muted);font-size:13px;margin-bottom:20px">Sign in to continue</div>
       <div class="fg"><label>Email</label><input type="email" id="l-em" placeholder="you@example.com"></div>
-      <div class="fg"><label>Password</label><input type="password" id="l-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btnp" onclick="doLogin()">Sign In →</button>
+      <div class="fg"><label>Password</label><input type="password" id="l-pw" placeholder="••••••••"></div>
+      <button class="btnp" id="btn-login" onclick="doLogin()">Sign In →</button>
     </div>
     <div id="af-r" style="display:none">
       <div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;margin-bottom:5px">Join RayChat 🚀</div>
       <div style="color:var(--muted);font-size:13px;margin-bottom:20px">Create your account</div>
       <div class="fg"><label>Email</label><input type="email" id="r-em" placeholder="you@example.com"></div>
-      <div class="fg"><label>Password</label><input type="password" id="r-pw" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doReg()"></div>
-      <button class="btnp" onclick="doReg()">Create Account →</button>
+      <div class="fg"><label>Password</label><input type="password" id="r-pw" placeholder="Min 6 characters"></div>
+      <button class="btnp" id="btn-reg" onclick="doReg()">Create Account →</button>
     </div>
     <div class="errtxt" id="a-err"></div>
   </div>
@@ -281,14 +273,14 @@ input,textarea{font-family:'DM Sans',sans-serif;}
     <div class="sstep">Step 1 of 2</div>
     <div class="stitle">What's your name?</div>
     <div class="ssub">This is how people will see you on RayChat.</div>
-    <div class="fg"><label>Display Name</label><input type="text" id="sn-i" placeholder="e.g. Rahmat Talukdar" onkeydown="if(event.key==='Enter')doSetName()"></div>
+    <div class="fg"><label>Display Name</label><input type="text" id="sn-i" placeholder="e.g. Rahmat Talukdar"></div>
     <button class="btnp" onclick="doSetName()">Continue →</button>
     <div class="errtxt" id="sn-err"></div>
   </div>
 </div>
 
 <!-- SETUP PROFILE -->
-<div class="screen" id="s-profile">
+<div class="screen" id="s-pf">
   <div class="abg"></div>
   <div class="scard">
     <div class="sprog"><div class="spdot done"></div><div class="spdot cur"></div></div>
@@ -309,14 +301,15 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 <!-- MAIN APP -->
 <div class="screen" id="s-app">
   <div class="layout">
-    <!-- Sidebar -->
     <div class="sb" id="sb">
       <div class="sb-top">
         <div class="sb-logo">Ray<span>Chat</span></div>
-        <div class="sb-acts"><button class="ib" onclick="toggleNcp()">✏️</button></div>
+        <div style="display:flex;gap:6px">
+          <button class="ib" onclick="toggleNcp()">✏️</button>
+        </div>
       </div>
       <div class="sb-me" onclick="openMyPf()">
-        <div class="meav" id="me-av" style="background:linear-gradient(135deg,#6c63ff,#9c63ff);width:36px;height:36px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;">😎<div class="medot"></div></div>
+        <div class="meav" id="me-av" style="width:36px;height:36px;font-size:16px;background:linear-gradient(135deg,#6c63ff,#9c63ff)">😎<div class="medot"></div></div>
         <div class="meinfo"><div class="mename" id="me-nm">You</div><div class="metag">● My Profile</div></div>
         <span style="color:var(--muted);font-size:13px">›</span>
       </div>
@@ -331,8 +324,6 @@ input,textarea{font-family:'DM Sans',sans-serif;}
       <div class="sb-search"><input type="text" placeholder="🔍  Search chats..." oninput="filterChats(this.value)"></div>
       <div class="chatlist" id="chatlist"><div class="emptylist">No chats yet.<br>Tap ✏️ to start!</div></div>
     </div>
-
-    <!-- Chat Area -->
     <div class="ca">
       <div class="caempty" id="caempty">
         <div class="caempty-ic">💬</div>
@@ -341,7 +332,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
       </div>
       <div id="camain" style="display:none;flex-direction:column;height:100%">
         <div class="chhead">
-          <button class="mobback ib" id="backbtn" onclick="goBack()">←</button>
+          <button class="mobback ib" onclick="goBack()">←</button>
           <div class="chav" id="chav" onclick="openOtherPf()">😎</div>
           <div class="chinfo" onclick="openOtherPf()">
             <div class="chname" id="chname">Chat</div>
@@ -368,7 +359,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
-<!-- OWN PROFILE MODAL -->
+<!-- OWN PROFILE -->
 <div class="moverlay" id="mo-me">
   <div class="mcard">
     <div class="pfhead">
@@ -387,7 +378,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
-<!-- OTHER PROFILE MODAL -->
+<!-- OTHER PROFILE -->
 <div class="moverlay" id="mo-other">
   <div class="mcard">
     <div class="pfhead">
@@ -440,48 +431,32 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
-<!-- Safety fallback: runs independently of module -->
 <script>
-  window._loadFallback = setTimeout(function() {
-    document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
-    var a = document.getElementById("s-auth");
-    if(a) a.classList.add("active");
-    var e = document.getElementById("a-err");
-    if(e) e.textContent = "⚠️ Open this from GitHub Pages or localhost — not a local file.";
-  }, 5000);
-</script>
+// ── FIREBASE CONFIG ──
+const FB_CFG = {
+  apiKey: "AIzaSyAlMwQT4d68D6A6xaQ1_EgB01G9Q6nEeKQ",
+  authDomain: "raychat-91527.firebaseapp.com",
+  databaseURL: "https://raychat-91527-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "raychat-91527",
+  storageBucket: "raychat-91527.firebasestorage.app",
+  messagingSenderId: "422943843087",
+  appId: "1:422943843087:web:9ff2e95fe56e09d56c147a"
+};
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-         signOut, onAuthStateChanged, updateProfile }
-         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getDatabase, ref, set, get, push, onValue, off,
-         query as dbQ, orderByChild, limitToLast, update, remove }
-         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+firebase.initializeApp(FB_CFG);
+const auth = firebase.auth();
+const db   = firebase.database();
 
-const app = initializeApp({
-  apiKey:"AIzaSyAlMwQT4d68D6A6xaQ1_EgB01G9Q6nEeKQ",
-  authDomain:"raychat-91527.firebaseapp.com",
-  databaseURL:"https://raychat-91527-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"raychat-91527",
-  storageBucket:"raychat-91527.firebasestorage.app",
-  messagingSenderId:"422943843087",
-  appId:"1:422943843087:web:9ff2e95fe56e09d56c147a"
-});
-const auth = getAuth(app), db = getDatabase(app);
-
-// STATE
+// ── STATE ──
 let ME = null, ACT_CID = null, ACT_OTHER = null;
-let msgL=null, chatsL=null, callL=null;
-let mediaRec=null, audioChunks=[], isRec=false;
-let pc=null, localStream=null, remoteStream=null;
-let activeCallId=null, callType=null, callSecs=0, callTick=null;
-let isMuted=false, isVidOff=false, pendingCall=null;
-// Store chat data by id for click handling
+let msgL = null, chatsL = null, callL = null;
+let mediaRec = null, audioChunks = [], isRec = false;
+let pc = null, localStream = null, remoteStream = null;
+let activeCallId = null, callType = null, callSecs = 0, callTick = null;
+let isMuted = false, isVidOff = false, pendingCall = null;
 const chatMap = {};
 
-const COLORS=[
+const COLORS = [
   'linear-gradient(135deg,#6c63ff,#9c63ff)',
   'linear-gradient(135deg,#00e5c8,#00a896)',
   'linear-gradient(135deg,#ff6b6b,#ee5a24)',
@@ -489,137 +464,181 @@ const COLORS=[
   'linear-gradient(135deg,#6ab04c,#badc58)',
   'linear-gradient(135deg,#e84393,#a855f7)'
 ];
-const EMOJIS=['😎','😊','🔥','⚡','🌙','🎯','👾','🦋','🐉','🌊','🎭','🚀'];
-let cEmoji='😎', cColor=COLORS[0];
+const EMOJIS = ['😎','😊','🔥','⚡','🌙','🎯','👾','🦋','🐉','🌊','🎭','🚀'];
+let cEmoji = '😎', cColor = COLORS[0];
 
-// UTILS
-const $=id=>document.getElementById(id);
+// ── UTILS ──
+const $ = id => document.getElementById(id);
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
-function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'):''; }
-function chatId(a,b){ return [a,b].sort().join('_'); }
+function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : ''; }
+function mkCid(a,b){ return [a,b].sort().join('_'); }
 function fmtT(ts){ if(!ts)return''; const d=new Date(ts),n=new Date(); return d.toDateString()===n.toDateString()?d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'}); }
-function fmtS(s){ return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
-window.closeM=id=>$(id).classList.remove('open');
+function fmtS(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
 function openM(id){ $(id).classList.add('open'); }
-const isMobile=()=>window.innerWidth<=700;
+function closeM(id){ $(id).classList.remove('open'); }
+window.closeM = closeM;
+const isMob = () => window.innerWidth <= 700;
 
-// AVATAR PICKER
+// ── AVATAR PICKER ──
 function initPicker(){
-  $('avemojis').innerHTML=EMOJIS.map(e=>`<div class="avem${e===cEmoji?' sel':''}" data-e="${e}">${e}</div>`).join('');
-  $('avcols').innerHTML=COLORS.map((c,i)=>`<div class="avcl${c===cColor?' sel':''}" style="background:${c}" data-i="${i}"></div>`).join('');
-  $('avemojis').onclick=ev=>{ const el=ev.target.closest('.avem'); if(!el)return; cEmoji=el.dataset.e; $('avprev').innerHTML=cEmoji+'<div class="avbadge">✏️</div>'; $('avemojis').querySelectorAll('.avem').forEach(x=>x.classList.toggle('sel',x.dataset.e===cEmoji)); };
-  $('avcols').onclick=ev=>{ const el=ev.target.closest('.avcl'); if(!el)return; cColor=COLORS[+el.dataset.i]; $('avprev').style.background=cColor; $('avcols').querySelectorAll('.avcl').forEach((x,j)=>x.classList.toggle('sel',j===+el.dataset.i)); };
+  $('avemojis').innerHTML = EMOJIS.map(e=>`<div class="avem${e===cEmoji?' sel':''}" data-e="${e}">${e}</div>`).join('');
+  $('avcols').innerHTML = COLORS.map((c,i)=>`<div class="avcl${c===cColor?' sel':''}" style="background:${c}" data-i="${i}"></div>`).join('');
+  $('avemojis').onclick = ev => {
+    const el = ev.target.closest('.avem'); if(!el) return;
+    cEmoji = el.dataset.e;
+    $('avprev').innerHTML = cEmoji + '<div class="avbadge">✏️</div>';
+    $('avemojis').querySelectorAll('.avem').forEach(x=>x.classList.toggle('sel', x.dataset.e===cEmoji));
+  };
+  $('avcols').onclick = ev => {
+    const el = ev.target.closest('.avcl'); if(!el) return;
+    cColor = COLORS[+el.dataset.i];
+    $('avprev').style.background = cColor;
+    $('avcols').querySelectorAll('.avcl').forEach((x,j)=>x.classList.toggle('sel', j===+el.dataset.i));
+  };
 }
 initPicker();
 
-// AUTH STATE
-const fbFallback=setTimeout(()=>show('s-auth'),8000);
-onAuthStateChanged(auth,async user=>{
-  clearTimeout(fbFallback); clearTimeout(window._loadFallback);
+// ── AUTH STATE ──
+auth.onAuthStateChanged(async user => {
   if(user){
-    const snap=await get(ref(db,`users/${user.uid}`));
-    if(!snap.val()?.name){ show('s-name'); }
-    else{ ME=snap.val(); enterApp(); }
+    const snap = await db.ref('users/'+user.uid).once('value');
+    if(!snap.val() || !snap.val().name){
+      show('s-name');
+    } else {
+      ME = snap.val();
+      enterApp();
+    }
   } else {
-    cleanAll(); ME=null; ACT_CID=null; ACT_OTHER=null;
+    cleanAll(); ME = null; ACT_CID = null; ACT_OTHER = null;
     show('s-auth');
   }
 });
 
-// AUTH
-window.atab=tab=>{
-  document.querySelectorAll('.atab').forEach((t,i)=>t.classList.toggle('on',(i===0)===(tab==='login')));
-  $('af-l').style.display=tab==='login'?'block':'none';
-  $('af-r').style.display=tab==='reg'?'block':'none';
-  $('a-err').textContent='';
-};
-window.doLogin=async()=>{
+// ── AUTH ──
+function atab(tab){
+  $('tab-login').classList.toggle('on', tab==='login');
+  $('tab-reg').classList.toggle('on', tab==='reg');
+  $('af-l').style.display = tab==='login' ? 'block' : 'none';
+  $('af-r').style.display = tab==='reg'   ? 'block' : 'none';
+  $('a-err').textContent = '';
+}
+window.atab = atab;
+
+function doLogin(){
   const em=$('l-em').value.trim(), pw=$('l-pw').value, e=$('a-err');
-  if(!em||!pw){e.textContent='Fill all fields.';return;}
-  try{ await signInWithEmailAndPassword(auth,em,pw); }
-  catch(err){ e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim(); }
-};
-window.doReg=async()=>{
+  if(!em||!pw){e.textContent='Please fill all fields.';return;}
+  e.textContent='Signing in...';
+  auth.signInWithEmailAndPassword(em, pw)
+    .then(()=>{ e.textContent=''; })
+    .catch(err=>{ e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim(); });
+}
+window.doLogin = doLogin;
+
+function doReg(){
   const em=$('r-em').value.trim(), pw=$('r-pw').value, e=$('a-err');
-  if(!em||!pw){e.textContent='Fill all fields.';return;}
+  if(!em||!pw){e.textContent='Please fill all fields.';return;}
   if(pw.length<6){e.textContent='Password must be 6+ characters.';return;}
-  try{ await createUserWithEmailAndPassword(auth,em,pw); }
-  catch(err){ e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim(); }
-};
+  e.textContent='Creating account...';
+  auth.createUserWithEmailAndPassword(em, pw)
+    .then(()=>{ e.textContent=''; })
+    .catch(err=>{ e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim(); });
+}
+window.doReg = doReg;
 
-// SETUP
-window.doSetName=async()=>{
-  const name=$('sn-i').value.trim();
+// Enter on input fields
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Enter') return;
+  if(document.activeElement === $('l-pw') || document.activeElement === $('l-em')) doLogin();
+  if(document.activeElement === $('r-pw') || document.activeElement === $('r-em')) doReg();
+  if(document.activeElement === $('sn-i')) doSetName();
+});
+
+// ── SETUP ──
+function doSetName(){
+  const name = $('sn-i').value.trim();
   if(!name){$('sn-err').textContent='Enter your name.';return;}
-  const u=auth.currentUser;
-  await updateProfile(u,{displayName:name});
-  await set(ref(db,`users/${u.uid}`),{uid:u.uid,email:u.email,name,emoji:'😎',color:COLORS[0],bio:''});
-  cEmoji='😎'; cColor=COLORS[0]; initPicker();
-  show('s-profile');
-};
-window.doSetProfile=async(skip)=>{
-  const u=auth.currentUser;
-  const bio=skip?'':$('sp-bio').value.trim();
-  await update(ref(db,`users/${u.uid}`),{emoji:skip?'😎':cEmoji,color:skip?COLORS[0]:cColor,bio});
-  const snap=await get(ref(db,`users/${u.uid}`));
-  ME=snap.val(); enterApp();
-};
+  const u = auth.currentUser;
+  u.updateProfile({displayName:name}).then(()=>{
+    db.ref('users/'+u.uid).set({uid:u.uid,email:u.email,name,emoji:'😎',color:COLORS[0],bio:''})
+      .then(()=>{ cEmoji='😎'; cColor=COLORS[0]; initPicker(); show('s-pf'); });
+  });
+}
+window.doSetName = doSetName;
 
-// ENTER APP
+function doSetProfile(skip){
+  const u = auth.currentUser;
+  const bio = skip ? '' : $('sp-bio').value.trim();
+  const emoji = skip ? '😎' : cEmoji;
+  const color = skip ? COLORS[0] : cColor;
+  db.ref('users/'+u.uid).update({emoji,color,bio}).then(()=>{
+    db.ref('users/'+u.uid).once('value').then(snap=>{ ME=snap.val(); enterApp(); });
+  });
+}
+window.doSetProfile = doSetProfile;
+
+// ── ENTER APP ──
 function enterApp(){
-  const av=$('me-av');
-  av.style.background=ME.color||COLORS[0];
-  av.textContent=ME.emoji||'😎';
-  const dot=document.createElement('div'); dot.className='medot'; av.appendChild(dot);
-  $('me-nm').textContent=ME.name||'You';
+  const av = $('me-av');
+  av.style.background = ME.color || COLORS[0];
+  av.textContent = ME.emoji || '😎';
+  const dot = document.createElement('div'); dot.className='medot'; av.appendChild(dot);
+  $('me-nm').textContent = ME.name || 'You';
   show('s-app');
   listenChats();
   listenCalls();
 }
 function cleanAll(){
-  if(msgL){off(msgL);msgL=null;}
-  if(chatsL){off(chatsL);chatsL=null;}
-  if(callL){off(callL);callL=null;}
+  if(msgL){ msgL.off(); msgL=null; }
+  if(chatsL){ chatsL.off(); chatsL=null; }
+  if(callL){ callL.off(); callL=null; }
 }
 
-// OWN PROFILE
-window.openMyPf=()=>{
-  $('pf-av').style.background=ME.color||COLORS[0]; $('pf-av').textContent=ME.emoji||'😎';
-  $('pf-nm').textContent=ME.name; $('pf-em').textContent=ME.email; $('pf-bio').textContent=ME.bio||'';
+// ── OWN PROFILE ──
+function openMyPf(){
+  $('pf-av').style.background = ME.color||COLORS[0]; $('pf-av').textContent = ME.emoji||'😎';
+  $('pf-nm').textContent = ME.name; $('pf-em').textContent = ME.email; $('pf-bio').textContent = ME.bio||'';
   openM('mo-me');
-};
-window.goEditPf=()=>{
+}
+window.openMyPf = openMyPf;
+
+function goEditPf(){
   closeM('mo-me'); cEmoji=ME.emoji||'😎'; cColor=ME.color||COLORS[0]; initPicker();
   $('avprev').style.background=cColor; $('avprev').innerHTML=cEmoji+'<div class="avbadge">✏️</div>';
-  $('sp-bio').value=ME.bio||''; show('s-profile');
-};
-window.doSwitch=async()=>{ closeM('mo-me'); cleanAll(); await signOut(auth); };
-window.doLogout=async()=>{ closeM('mo-me'); cleanAll(); await signOut(auth); };
+  $('sp-bio').value=ME.bio||''; show('s-pf');
+}
+window.goEditPf = goEditPf;
 
-// OTHER PROFILE
-window.openOtherPf=async()=>{
-  if(!ACT_OTHER)return;
-  const snap=await get(ref(db,`users/${ACT_OTHER.uid}`));
-  const u=snap.val()||ACT_OTHER;
-  $('op-av').style.background=u.color||COLORS[0]; $('op-av').textContent=u.emoji||'😎';
-  $('op-nm').textContent=u.name||'User'; $('op-em').textContent=u.email||''; $('op-bio').textContent=u.bio||'No bio yet.';
-  openM('mo-other');
-};
+function doSwitch(){ closeM('mo-me'); cleanAll(); auth.signOut(); }
+function doLogout(){ closeM('mo-me'); cleanAll(); auth.signOut(); }
+window.doSwitch = doSwitch;
+window.doLogout = doLogout;
 
-// CHATS
+// ── OTHER PROFILE ──
+function openOtherPf(){
+  if(!ACT_OTHER) return;
+  db.ref('users/'+ACT_OTHER.uid).once('value').then(snap=>{
+    const u = snap.val() || ACT_OTHER;
+    $('op-av').style.background=u.color||COLORS[0]; $('op-av').textContent=u.emoji||'😎';
+    $('op-nm').textContent=u.name||'User'; $('op-em').textContent=u.email||'';
+    $('op-bio').textContent=u.bio||'No bio yet.';
+    openM('mo-other');
+  });
+}
+window.openOtherPf = openOtherPf;
+
+// ── CHATS ──
 function listenChats(){
-  const r=ref(db,`userChats/${ME.uid}`); chatsL=r;
-  onValue(r,snap=>{
-    const list=Object.values(snap.val()||{}).sort((a,b)=>(b.lastTime||0)-(a.lastTime||0));
-    // Store in map
+  chatsL = db.ref('userChats/'+ME.uid);
+  chatsL.on('value', snap=>{
+    const list = Object.values(snap.val()||{}).sort((a,b)=>(b.lastTime||0)-(a.lastTime||0));
     list.forEach(c=>{ chatMap[c.chatId]=c; });
     renderChats(list);
   });
 }
 function renderChats(list){
-  const el=$('chatlist');
-  if(!list.length){el.innerHTML='<div class="emptylist">No chats yet.<br>Tap ✏️ to start!</div>';return;}
-  el.innerHTML=list.map(c=>`
+  const el = $('chatlist');
+  if(!list.length){ el.innerHTML='<div class="emptylist">No chats yet.<br>Tap ✏️ to start!</div>'; return; }
+  el.innerHTML = list.map(c=>`
     <div class="cr${ACT_CID===c.chatId?' on':''}" data-cid="${c.chatId}">
       <div class="crav" style="background:${c.otherColor||COLORS[0]}">${c.otherEmoji||'😎'}<div class="crdot"></div></div>
       <div class="crinfo">
@@ -628,49 +647,60 @@ function renderChats(list){
       </div>
       <div class="crtime">${fmtT(c.lastTime)}</div>
     </div>`).join('');
-  // Attach click events properly
   el.querySelectorAll('.cr').forEach(row=>{
-    row.addEventListener('click',()=>openChat(row.dataset.cid));
+    row.addEventListener('click', ()=>openChat(row.dataset.cid));
   });
 }
-window.filterChats=q=>{ document.querySelectorAll('.cr').forEach(el=>{ el.style.display=el.querySelector('.crname')?.textContent.toLowerCase().includes(q.toLowerCase())?'':'none'; }); };
-window.toggleNcp=()=>{ const p=$('ncp'); p.classList.toggle('open'); if(p.classList.contains('open'))$('ncp-em').focus(); $('ncp-err').textContent=''; };
+function filterChats(q){
+  document.querySelectorAll('.cr').forEach(el=>{
+    el.style.display = el.querySelector('.crname')?.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+window.filterChats = filterChats;
 
-window.startChat=async()=>{
-  const email=$('ncp-em').value.trim().toLowerCase(), e=$('ncp-err');
+function toggleNcp(){
+  const p = $('ncp'); p.classList.toggle('open');
+  if(p.classList.contains('open')) $('ncp-em').focus();
+  $('ncp-err').textContent='';
+}
+window.toggleNcp = toggleNcp;
+
+function startChat(){
+  const email = $('ncp-em').value.trim().toLowerCase(), e=$('ncp-err');
   e.textContent='';
   if(!email){e.textContent='Enter an email.';return;}
   if(email===ME.email){e.textContent="That's your own email!";return;}
-  const snap=await get(ref(db,'users'));
-  const found=Object.values(snap.val()||{}).find(u=>u.email===email);
-  if(!found){e.textContent='User not found. They must sign up first.';return;}
-  const cid=chatId(ME.uid,found.uid);
-  const d={chatId:cid,otherUid:found.uid,otherName:found.name,otherEmail:found.email,otherEmoji:found.emoji||'😎',otherColor:found.color||COLORS[0],lastMsg:'',lastTime:Date.now()};
-  await update(ref(db,`userChats/${ME.uid}/${cid}`),d);
-  await update(ref(db,`userChats/${found.uid}/${cid}`),{chatId:cid,otherUid:ME.uid,otherName:ME.name,otherEmail:ME.email,otherEmoji:ME.emoji||'😎',otherColor:ME.color||COLORS[0],lastMsg:'',lastTime:Date.now()});
-  $('ncp-em').value=''; $('ncp').classList.remove('open');
-  chatMap[cid]=d; openChat(cid);
-};
+  e.textContent='Searching...';
+  db.ref('users').once('value').then(snap=>{
+    const found = Object.values(snap.val()||{}).find(u=>u.email===email);
+    if(!found){e.textContent='User not found. They must sign up first.';return;}
+    e.textContent='';
+    const cid = mkCid(ME.uid, found.uid);
+    const d = {chatId:cid,otherUid:found.uid,otherName:found.name,otherEmail:found.email,otherEmoji:found.emoji||'😎',otherColor:found.color||COLORS[0],lastMsg:'',lastTime:Date.now()};
+    db.ref('userChats/'+ME.uid+'/'+cid).update(d);
+    db.ref('userChats/'+found.uid+'/'+cid).update({chatId:cid,otherUid:ME.uid,otherName:ME.name,otherEmail:ME.email,otherEmoji:ME.emoji||'😎',otherColor:ME.color||COLORS[0],lastMsg:'',lastTime:Date.now()});
+    $('ncp-em').value=''; $('ncp').classList.remove('open');
+    chatMap[cid]=d; openChat(cid);
+  });
+}
+window.startChat = startChat;
 
 function openChat(cid){
-  const c=chatMap[cid]; if(!c)return;
-  ACT_CID=cid; ACT_OTHER={uid:c.otherUid,name:c.otherName,email:c.otherEmail,emoji:c.otherEmoji,color:c.otherColor};
-  $('caempty').style.display='none';
-  $('camain').style.display='flex';
+  const c = chatMap[cid]; if(!c) return;
+  ACT_CID=cid;
+  ACT_OTHER={uid:c.otherUid,name:c.otherName,email:c.otherEmail,emoji:c.otherEmoji,color:c.otherColor};
+  $('caempty').style.display='none'; $('camain').style.display='flex';
   $('chav').style.background=c.otherColor||COLORS[0]; $('chav').textContent=c.otherEmoji||'😎';
   $('chname').textContent=c.otherName||c.otherEmail;
-  // Mobile: hide sidebar, show chat
-  if(isMobile()) $('sb').classList.add('hide');
-  // Messages
-  if(msgL){off(msgL);msgL=null;}
-  const mRef=dbQ(ref(db,`messages/${cid}`),orderByChild('time'),limitToLast(100));
-  msgL=mRef;
-  onValue(mRef,snap=>renderMsgs(Object.values(snap.val()||{}).sort((a,b)=>a.time-b.time)));
-  // Update active state
-  document.querySelectorAll('.cr').forEach(el=>el.classList.toggle('on',el.dataset.cid===cid));
+  if(isMob()) $('sb').classList.add('hide');
+  if(msgL){msgL.off();msgL=null;}
+  msgL = db.ref('messages/'+cid).orderByChild('time').limitToLast(100);
+  msgL.on('value', snap=>renderMsgs(Object.values(snap.val()||{}).sort((a,b)=>a.time-b.time)));
+  document.querySelectorAll('.cr').forEach(el=>el.classList.toggle('on', el.dataset.cid===cid));
 }
 
-window.goBack=()=>{ $('sb').classList.remove('hide'); };
+function goBack(){ $('sb').classList.remove('hide'); }
+window.goBack = goBack;
 
 function renderMsgs(msgs){
   const el=$('msgs');
@@ -685,12 +715,7 @@ function renderMsgs(msgs){
     let bub='';
     if(m.type==='voice'){
       const aid='au'+m.time;
-      bub=`<div class="mbub vbub">
-        <button class="vplay" onclick="playV('${aid}',this)">▶</button>
-        <div class="vwave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-        <span class="vdur">${m.dur||'0:00'}</span>
-        <audio id="${aid}" style="display:none" src="${m.voiceData||''}"></audio>
-      </div>`;
+      bub=`<div class="mbub vbub"><button class="vplay" onclick="playV('${aid}',this)">▶</button><div class="vwave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="vdur">${m.dur||'0:00'}</span><audio id="${aid}" style="display:none" src="${m.voiceData||''}"></audio></div>`;
     } else {
       bub=`<div class="mbub">${esc(m.text)}</div>`;
     }
@@ -699,62 +724,63 @@ function renderMsgs(msgs){
   el.scrollTop=el.scrollHeight;
 }
 
-window.sendMsg=async()=>{
+function sendMsg(){
   const ta=$('msgta'), text=ta.value.trim();
-  if(!text||!ACT_CID||!ME)return;
+  if(!text||!ACT_CID||!ME) return;
   ta.value=''; ta.style.height='auto';
   const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],time:Date.now()};
-  await push(ref(db,`messages/${ACT_CID}`),msg);
-  for(const uid of ACT_CID.split('_')) await update(ref(db,`userChats/${uid}/${ACT_CID}`),{lastMsg:text,lastTime:Date.now()});
-};
+  db.ref('messages/'+ACT_CID).push(msg);
+  ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:Date.now()}));
+}
+window.sendMsg = sendMsg;
 
-// VOICE
-window.startRec=async(e)=>{
-  if(e)e.preventDefault();
-  if(!ACT_CID)return;
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+// ── VOICE ──
+function startRec(e){
+  if(e) e.preventDefault();
+  if(!ACT_CID) return;
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
     audioChunks=[]; mediaRec=new MediaRecorder(stream);
     mediaRec.ondataavailable=ev=>audioChunks.push(ev.data);
     mediaRec.start(); isRec=true;
     $('micbtn').classList.add('rec'); $('rechint').classList.add('show');
-  }catch(){ alert('Microphone access denied.'); }
-};
-window.stopRec=async()=>{
-  if(!isRec||!mediaRec)return;
+  }).catch(()=>alert('Microphone access denied.'));
+}
+function stopRec(){
+  if(!isRec||!mediaRec) return;
   isRec=false; $('micbtn').classList.remove('rec'); $('rechint').classList.remove('show');
-  mediaRec.onstop=async()=>{
+  mediaRec.onstop=()=>{
     const blob=new Blob(audioChunks,{type:'audio/webm'});
     mediaRec.stream.getTracks().forEach(t=>t.stop());
     const reader=new FileReader();
-    reader.onloadend=async()=>{
+    reader.onloadend=()=>{
       const dur=fmtS(Math.max(1,Math.round(blob.size/8000)));
       const msg={type:'voice',voiceData:reader.result,dur,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],time:Date.now()};
-      await push(ref(db,`messages/${ACT_CID}`),msg);
-      for(const uid of ACT_CID.split('_')) await update(ref(db,`userChats/${uid}/${ACT_CID}`),{lastMsg:'🎤 Voice message',lastTime:Date.now()});
+      db.ref('messages/'+ACT_CID).push(msg);
+      ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:'🎤 Voice message',lastTime:Date.now()}));
     };
     reader.readAsDataURL(blob);
   };
   mediaRec.stop();
-};
-window.cancelRec=()=>{
-  if(!isRec||!mediaRec)return;
+}
+function cancelRec(){
+  if(!isRec||!mediaRec) return;
   isRec=false; mediaRec.stream?.getTracks().forEach(t=>t.stop()); mediaRec.stop();
   $('micbtn').classList.remove('rec'); $('rechint').classList.remove('show'); audioChunks=[];
-};
-window.playV=(aid,btn)=>{
-  const au=$(aid); if(!au)return;
+}
+function playV(aid,btn){
+  const au=$(aid); if(!au) return;
   if(au.paused){au.play();btn.textContent='⏸';au.onended=()=>{btn.textContent='▶';};}
   else{au.pause();btn.textContent='▶';}
-};
+}
+window.startRec=startRec; window.stopRec=stopRec; window.cancelRec=cancelRec; window.playV=playV;
 
-// CALLS
+// ── CALLS (WebRTC) ──
 const RTC={iceServers:[{urls:['stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302']}]};
 function listenCalls(){
-  const r=ref(db,`incomingCalls/${ME.uid}`); callL=r;
-  onValue(r,snap=>{
+  callL=db.ref('incomingCalls/'+ME.uid);
+  callL.on('value',snap=>{
     const d=snap.val();
-    if(d?.callId&&d.status!=='ended'){
+    if(d&&d.callId&&d.status!=='ended'){
       pendingCall=d;
       $('ci-av').style.background=d.callerColor||COLORS[0]; $('ci-av').textContent=d.callerEmoji||'😎';
       $('ci-nm').textContent=d.callerName||'Someone';
@@ -763,76 +789,69 @@ function listenCalls(){
     }
   });
 }
-window.startCall=async(type)=>{
-  if(!ACT_OTHER)return;
+function startCall(type){
+  if(!ACT_OTHER) return;
   callType=type;
-  try{ localStream=await navigator.mediaDevices.getUserMedia({video:type==='video',audio:true}); }
-  catch(){ alert('Camera/mic access denied.'); return; }
-  pc=new RTCPeerConnection(RTC);
-  localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
-  remoteStream=new MediaStream();
-  pc.ontrack=e=>{
-    e.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t));
-    $('vr').srcObject=remoteStream;
-    if(type==='video'){$('vr').style.display='block';$('call-ph').style.display='none';}
-  };
-  if(type==='video'){$('vl').srcObject=localStream;$('vl').style.display='block';}
-  activeCallId=Date.now().toString();
-  pc.onicecandidate=e=>{ if(e.candidate) push(ref(db,`signals/${activeCallId}/cCands`),e.candidate.toJSON()); };
-  pc.onconnectionstatechange=()=>{ if(pc.connectionState==='connected'){startTick();$('call-stat').textContent='Connected ✓';} };
-  const offer=await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  await set(ref(db,`signals/${activeCallId}`),{offer:{type:offer.type,sdp:offer.sdp},callerId:ME.uid,calleeId:ACT_OTHER.uid,type,status:'calling'});
-  await set(ref(db,`incomingCalls/${ACT_OTHER.uid}`),{callId:activeCallId,callerId:ME.uid,callerName:ME.name,callerEmoji:ME.emoji||'😎',callerColor:ME.color||COLORS[0],type,status:'calling'});
-  onValue(ref(db,`signals/${activeCallId}/answer`),async snap=>{ if(snap.val()&&!pc.currentRemoteDescription) await pc.setRemoteDescription(new RTCSessionDescription(snap.val())); });
-  onValue(ref(db,`signals/${activeCallId}/eCands`),snap=>{ snap.forEach(ch=>{ pc?.remoteDescription&&pc.addIceCandidate(new RTCIceCandidate(ch.val())).catch(()=>{}); }); });
-  onValue(ref(db,`signals/${activeCallId}/status`),snap=>{ if(snap.val()==='ended')endCall(); });
-  $('call-peer').textContent=ACT_OTHER.name||'User';
-  $('call-ph').textContent=ACT_OTHER.emoji||'😎'; $('call-ph').style.display='flex';
-  $('vr').style.display='none';
-  $('call-stat').textContent='Calling...'; $('call-timer').textContent='00:00';
-  openM('mo-ca');
-};
-window.acceptCall=async()=>{
-  closeM('mo-cin');
-  if(!pendingCall)return;
+  navigator.mediaDevices.getUserMedia({video:type==='video',audio:true}).then(stream=>{
+    localStream=stream; pc=new RTCPeerConnection(RTC);
+    stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+    remoteStream=new MediaStream();
+    pc.ontrack=e=>{ e.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t)); $('vr').srcObject=remoteStream; if(type==='video'){$('vr').style.display='block';$('call-ph').style.display='none';} };
+    if(type==='video'){$('vl').srcObject=stream;$('vl').style.display='block';}
+    activeCallId=Date.now().toString();
+    pc.onicecandidate=e=>{ if(e.candidate) db.ref('signals/'+activeCallId+'/cCands').push(e.candidate.toJSON()); };
+    pc.onconnectionstatechange=()=>{ if(pc.connectionState==='connected'){startTick();$('call-stat').textContent='Connected ✓';} };
+    pc.createOffer().then(offer=>{
+      pc.setLocalDescription(offer);
+      db.ref('signals/'+activeCallId).set({offer:{type:offer.type,sdp:offer.sdp},callerId:ME.uid,calleeId:ACT_OTHER.uid,type,status:'calling'});
+      db.ref('incomingCalls/'+ACT_OTHER.uid).set({callId:activeCallId,callerId:ME.uid,callerName:ME.name,callerEmoji:ME.emoji||'😎',callerColor:ME.color||COLORS[0],type,status:'calling'});
+      db.ref('signals/'+activeCallId+'/answer').on('value',snap=>{ if(snap.val()&&!pc.currentRemoteDescription) pc.setRemoteDescription(new RTCSessionDescription(snap.val())); });
+      db.ref('signals/'+activeCallId+'/eCands').on('child_added',snap=>{ if(pc.remoteDescription) pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{}); });
+      db.ref('signals/'+activeCallId+'/status').on('value',snap=>{ if(snap.val()==='ended') endCall(); });
+    });
+    $('call-peer').textContent=ACT_OTHER.name||'User';
+    $('call-ph').textContent=ACT_OTHER.emoji||'😎'; $('call-ph').style.display='flex'; $('vr').style.display='none';
+    $('call-stat').textContent='Calling...'; $('call-timer').textContent='00:00';
+    openM('mo-ca');
+  }).catch(()=>alert('Camera/mic access denied.'));
+}
+function acceptCall(){
+  closeM('mo-cin'); if(!pendingCall) return;
   const cid=pendingCall.callId; activeCallId=cid; callType=pendingCall.type;
-  try{ localStream=await navigator.mediaDevices.getUserMedia({video:callType==='video',audio:true}); }
-  catch(){ alert('Camera/mic access denied.'); return; }
-  pc=new RTCPeerConnection(RTC);
-  localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
-  remoteStream=new MediaStream();
-  pc.ontrack=e=>{
-    e.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t));
-    $('vr').srcObject=remoteStream;
-    if(callType==='video'){$('vr').style.display='block';$('call-ph').style.display='none';}
-  };
-  if(callType==='video'){$('vl').srcObject=localStream;$('vl').style.display='block';}
-  pc.onicecandidate=e=>{ if(e.candidate) push(ref(db,`signals/${cid}/eCands`),e.candidate.toJSON()); };
-  pc.onconnectionstatechange=()=>{ if(pc.connectionState==='connected'){startTick();$('call-stat').textContent='Connected ✓';} };
-  const snap=await get(ref(db,`signals/${cid}/offer`));
-  await pc.setRemoteDescription(new RTCSessionDescription(snap.val()));
-  const ans=await pc.createAnswer();
-  await pc.setLocalDescription(ans);
-  await update(ref(db,`signals/${cid}`),{answer:{type:ans.type,sdp:ans.sdp},status:'active'});
-  onValue(ref(db,`signals/${cid}/cCands`),snap=>{ snap.forEach(ch=>{ pc?.remoteDescription&&pc.addIceCandidate(new RTCIceCandidate(ch.val())).catch(()=>{}); }); });
-  onValue(ref(db,`signals/${cid}/status`),snap=>{ if(snap.val()==='ended')endCall(); });
-  $('call-peer').textContent=pendingCall.callerName||'User';
-  $('call-ph').textContent=pendingCall.callerEmoji||'😎'; $('call-ph').style.display='flex';
-  $('vr').style.display='none';
-  $('call-stat').textContent='Connecting...';
-  openM('mo-ca');
-  await remove(ref(db,`incomingCalls/${ME.uid}`));
-  pendingCall=null;
-};
-window.rejectCall=async()=>{
+  navigator.mediaDevices.getUserMedia({video:callType==='video',audio:true}).then(stream=>{
+    localStream=stream; pc=new RTCPeerConnection(RTC);
+    stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+    remoteStream=new MediaStream();
+    pc.ontrack=e=>{ e.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t)); $('vr').srcObject=remoteStream; if(callType==='video'){$('vr').style.display='block';$('call-ph').style.display='none';} };
+    if(callType==='video'){$('vl').srcObject=stream;$('vl').style.display='block';}
+    pc.onicecandidate=e=>{ if(e.candidate) db.ref('signals/'+cid+'/eCands').push(e.candidate.toJSON()); };
+    pc.onconnectionstatechange=()=>{ if(pc.connectionState==='connected'){startTick();$('call-stat').textContent='Connected ✓';} };
+    db.ref('signals/'+cid+'/offer').once('value').then(snap=>{
+      pc.setRemoteDescription(new RTCSessionDescription(snap.val())).then(()=>{
+        pc.createAnswer().then(ans=>{
+          pc.setLocalDescription(ans);
+          db.ref('signals/'+cid).update({answer:{type:ans.type,sdp:ans.sdp},status:'active'});
+          db.ref('signals/'+cid+'/cCands').on('child_added',snap=>{ if(pc.remoteDescription) pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{}); });
+          db.ref('signals/'+cid+'/status').on('value',snap=>{ if(snap.val()==='ended') endCall(); });
+        });
+      });
+    });
+    $('call-peer').textContent=pendingCall.callerName||'User';
+    $('call-ph').textContent=pendingCall.callerEmoji||'😎'; $('call-ph').style.display='flex'; $('vr').style.display='none';
+    $('call-stat').textContent='Connecting...';
+    openM('mo-ca');
+    db.ref('incomingCalls/'+ME.uid).remove();
+    pendingCall=null;
+  }).catch(()=>alert('Camera/mic access denied.'));
+}
+function rejectCall(){
   closeM('mo-cin');
-  if(pendingCall){ await update(ref(db,`signals/${pendingCall.callId}`),{status:'ended'}); await remove(ref(db,`incomingCalls/${ME.uid}`)); pendingCall=null; }
-};
-window.endCall=async()=>{
+  if(pendingCall){ db.ref('signals/'+pendingCall.callId).update({status:'ended'}); db.ref('incomingCalls/'+ME.uid).remove(); pendingCall=null; }
+}
+function endCall(){
   stopTick();
-  if(activeCallId) await update(ref(db,`signals/${activeCallId}`),{status:'ended'});
-  if(ME) await remove(ref(db,`incomingCalls/${ME.uid}`));
+  if(activeCallId) db.ref('signals/'+activeCallId).update({status:'ended'});
+  if(ME) db.ref('incomingCalls/'+ME.uid).remove();
   pc?.close(); pc=null;
   localStream?.getTracks().forEach(t=>t.stop()); localStream=null;
   $('vr').srcObject=null; $('vr').style.display='none';
@@ -842,11 +861,12 @@ window.endCall=async()=>{
   $('btn-mute').classList.remove('on'); $('btn-vid').classList.remove('off');
   $('btn-mute').textContent='🎤'; $('btn-vid').textContent='📹';
   closeM('mo-ca');
-};
+}
 function startTick(){ callSecs=0; callTick=setInterval(()=>{ callSecs++; $('call-timer').textContent=fmtS(callSecs); },1000); }
 function stopTick(){ if(callTick){clearInterval(callTick);callTick=null;} }
-window.toggleMute=()=>{ isMuted=!isMuted; localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted); $('btn-mute').classList.toggle('on',isMuted); $('btn-mute').textContent=isMuted?'🔇':'🎤'; };
-window.toggleVid=()=>{ isVidOff=!isVidOff; localStream?.getVideoTracks().forEach(t=>t.enabled=!isVidOff); $('btn-vid').classList.toggle('off',isVidOff); $('btn-vid').textContent=isVidOff?'📷':'📹'; };
+function toggleMute(){ isMuted=!isMuted; localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted); $('btn-mute').classList.toggle('on',isMuted); $('btn-mute').textContent=isMuted?'🔇':'🎤'; }
+function toggleVid(){ isVidOff=!isVidOff; localStream?.getVideoTracks().forEach(t=>t.enabled=!isVidOff); $('btn-vid').classList.toggle('off',isVidOff); $('btn-vid').textContent=isVidOff?'📷':'📹'; }
+window.startCall=startCall; window.acceptCall=acceptCall; window.rejectCall=rejectCall; window.endCall=endCall; window.toggleMute=toggleMute; window.toggleVid=toggleVid;
 </script>
 </body>
 </html>

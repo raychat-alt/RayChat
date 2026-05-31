@@ -440,6 +440,17 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
+<!-- Safety fallback: runs independently of module -->
+<script>
+  window._loadFallback = setTimeout(function() {
+    document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
+    var a = document.getElementById("s-auth");
+    if(a) a.classList.add("active");
+    var e = document.getElementById("a-err");
+    if(e) e.textContent = "⚠️ Open this from GitHub Pages or localhost — not a local file.";
+  }, 5000);
+</script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -504,7 +515,7 @@ initPicker();
 // AUTH STATE
 const fbFallback=setTimeout(()=>show('s-auth'),8000);
 onAuthStateChanged(auth,async user=>{
-  clearTimeout(fbFallback);
+  clearTimeout(fbFallback); clearTimeout(window._loadFallback);
   if(user){
     const snap=await get(ref(db,`users/${user.uid}`));
     if(!snap.val()?.name){ show('s-name'); }

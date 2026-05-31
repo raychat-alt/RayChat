@@ -20,7 +20,7 @@
   --recv:#161b26;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;overflow:hidden;}
+html,body{height:100%;overflow:hidden;}@supports(-webkit-touch-callout:none){html,body{height:-webkit-fill-available;}}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;}
 button{cursor:pointer;font-family:'DM Sans',sans-serif;}
 input,textarea{font-family:'DM Sans',sans-serif;}
@@ -163,7 +163,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .msgta{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;resize:none;height:44px;max-height:110px;transition:border-color .2s;line-height:1.4;}
 .msgta:focus{border-color:var(--accent);}
 .msgta::placeholder{color:var(--muted);}
-.sendbtn{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#00b5a0);border:none;border-radius:12px;color:#000;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sendbtn{width:44px;height:44px;min-width:44px;background:linear-gradient(135deg,var(--accent),#00b5a0);border:none;border-radius:12px;color:#000;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .sendbtn:active{opacity:.8;}
 .micbtn{width:44px;height:44px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none;-webkit-user-select:none;transition:all .2s;}
 .micbtn.rec{background:var(--danger);border-color:var(--danger);color:#fff;animation:pmb .6s ease infinite;}
@@ -218,6 +218,10 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 /* MOBILE */
 .mobback{display:none;width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--muted);align-items:center;justify-content:center;font-size:15px;margin-right:4px;}
 @media(max-width:700px){
+  html,body{height:100%;height:-webkit-fill-available;}
+  .layout{position:relative;height:100%;height:-webkit-fill-available;}
+  .ca{position:absolute;inset:0;width:100%;z-index:5;display:flex;flex-direction:column;}
+  #camain{flex:1;min-height:0;}
   .layout{position:relative;}
   .sb{position:absolute;inset:0;width:100%;z-index:10;}
   .sb.hide{transform:translateX(-100%);}
@@ -226,6 +230,8 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   .acard,.scard{width:94vw;padding:30px 22px;}
   .mbub{max-width:78vw;}
   .moverlay{align-items:flex-end;padding:0;}
+  .sendbtn,.micbtn{width:48px;height:48px;min-width:48px;font-size:18px;}
+  .msgta{font-size:16px;}
   .mcard{border-radius:22px 22px 0 0;max-width:100%;}
 }
 </style>
@@ -436,10 +442,11 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 const FB_CFG = {
   apiKey: "AIzaSyAELh52zsVqUQOOka0U7nawPh4DEPqV6qc",
   authDomain: "raychat-rt.firebaseapp.com",
+  databaseURL: "https://raychat-rt-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "raychat-rt",
   storageBucket: "raychat-rt.firebasestorage.app",
   messagingSenderId: "96488181209",
-  appId: "1:96488181209:web:e73cd137f1beff3fc99dc8",
+  appId: "1:96488181209:web:e73cd137f1beff3fc99dc8"
 };
 
 firebase.initializeApp(FB_CFG);
@@ -866,6 +873,25 @@ function stopTick(){ if(callTick){clearInterval(callTick);callTick=null;} }
 function toggleMute(){ isMuted=!isMuted; localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted); $('btn-mute').classList.toggle('on',isMuted); $('btn-mute').textContent=isMuted?'🔇':'🎤'; }
 function toggleVid(){ isVidOff=!isVidOff; localStream?.getVideoTracks().forEach(t=>t.enabled=!isVidOff); $('btn-vid').classList.toggle('off',isVidOff); $('btn-vid').textContent=isVidOff?'📷':'📹'; }
 window.startCall=startCall; window.acceptCall=acceptCall; window.rejectCall=rejectCall; window.endCall=endCall; window.toggleMute=toggleMute; window.toggleVid=toggleVid;
+
+// ── MOBILE KEYBOARD FIX ──
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", function(){
+    var app = document.getElementById("s-app");
+    if(app && app.classList.contains("active")){
+      var h = window.visualViewport.height;
+      app.style.height = h + "px";
+      var ca = document.querySelector(".ca");
+      if(ca) ca.style.height = h + "px";
+      var msgs = document.getElementById("msgs");
+      if(msgs) msgs.scrollTop = msgs.scrollHeight;
+    }
+  });
+  window.visualViewport.addEventListener("scroll", function(){
+    var msgs = document.getElementById("msgs");
+    if(msgs) msgs.scrollTop = msgs.scrollHeight;
+  });
+}
 </script>
 </body>
 </html>

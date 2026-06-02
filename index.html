@@ -106,6 +106,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 
 /* APP */
 #s-app{background:var(--bg);}
+#s-app.active{height:100vh;height:100dvh;}
 .layout{width:100%;height:100vh;display:flex;}
 .sb{width:300px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100vh;transition:transform .28s cubic-bezier(.4,0,.2,1);}
 .ca{flex:1;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
@@ -283,11 +284,17 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .mobback{display:none;width:32px;height:32px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--muted);align-items:center;justify-content:center;font-size:15px;margin-right:4px;transition:transform .15s cubic-bezier(.34,1.56,.64,1);}
 .mobback:active{transform:scale(.85) translateX(-3px);}
 @media(max-width:700px){
-  .layout{position:relative;height:100%;height:-webkit-fill-available;}
+  *{-webkit-overflow-scrolling:touch;}
+  .layout{position:relative;height:100vh;height:100dvh;width:100%;}
   .sb{position:absolute;inset:0;width:100%;z-index:10;}
   .sb.hide{transform:translateX(-100%);}
-  .ca{position:absolute;inset:0;width:100%;z-index:5;display:flex;flex-direction:column;}
-  #camain{flex:1;min-height:0;}
+  .ca{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;z-index:5;display:flex !important;flex-direction:column;height:100%;overflow:hidden;}
+  #camain{flex:1 !important;min-height:0;display:flex !important;flex-direction:column;overflow:hidden;height:100%;}
+  #camain .msgs{flex:1 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;}
+  #camain .inprow{flex-shrink:0 !important;position:relative;z-index:2;}
+  #camain .chhead{flex-shrink:0 !important;}
+  #camain .rechint{flex-shrink:0;}
+  #camain #typing-ind{flex-shrink:0;}
   .mobback{display:flex !important;}
   .acard,.scard,.tfa-card,.verify-card{width:94vw;padding:30px 22px;}
   .mbub{max-width:78vw;}
@@ -878,7 +885,7 @@ window.startChat=startChat;
 function openChat(cid){
   const c=chatMap[cid]; if(!c)return;
   ACT_CID=cid; ACT_OTHER={uid:c.otherUid,name:c.otherName,email:c.otherEmail,emoji:c.otherEmoji,color:c.otherColor};
-  $('caempty').style.display='none'; $('camain').style.display='flex';
+  $('caempty').style.display='none'; var cm=$('camain'); cm.style.display='flex'; cm.style.flexDirection='column'; cm.style.height='100%';
   $('chav').style.background=c.otherColor||COLORS[0]; $('chav').textContent=c.otherEmoji||'😎';
   $('chname').textContent=c.otherName||c.otherEmail;
   if(isMob()) $('sb').classList.add('hide');

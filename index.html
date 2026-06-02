@@ -265,22 +265,31 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .calrej{width:58px;height:58px;border-radius:50%;border:none;background:var(--danger);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);}
 .calacc:active,.calrej:active{transform:scale(.9);}
 /* Active call */
-.callvids{position:relative;background:#000;height:200px;}
-#vr{width:100%;height:100%;object-fit:cover;display:none;}
-.callph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;background:var(--surface2);}
-#vl{position:absolute;bottom:8px;right:8px;width:85px;height:64px;object-fit:cover;border-radius:9px;border:2px solid var(--border);display:none;}
-.callmeta{padding:14px 18px;text-align:center;border-bottom:1px solid var(--border);}
-.callpeer{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
-.calltimer{font-size:13px;color:var(--muted);margin-top:2px;animation:tglow 2s ease infinite;}
-@keyframes tglow{0%,100%{color:var(--muted);}50%{color:var(--accent);}}
-.callstat{font-size:12px;color:var(--accent);margin-top:2px;}
-.callctrl{padding:16px 18px;display:flex;justify-content:center;gap:12px;}
-.ccbtn{width:50px;height:50px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .2s;}
-.ccbtn.mute{background:var(--surface2);color:var(--text);}
+/* FULL SCREEN CALL */
+#mo-ca{padding:0;background:#000;}
+#mo-ca .mcard{max-width:100%;width:100%;height:100vh;height:100dvh;border-radius:0;border:none;background:#000;position:relative;display:flex;flex-direction:column;}
+.callvids{position:relative;flex:1;background:#111;overflow:hidden;}
+#vr{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;z-index:1;}
+.callph{position:absolute;inset:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-size:80px;background:linear-gradient(160deg,#0e1118,#1e2436);z-index:1;}
+.callph-av{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:52px;border:3px solid rgba(255,255,255,.15);overflow:hidden;animation:callAvPulse 2s ease infinite;}
+@keyframes callAvPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,200,.3);}50%{box-shadow:0 0 0 20px rgba(0,229,200,0);}}
+.callph-av img{width:100%;height:100%;object-fit:cover;}
+#vl{position:absolute;bottom:16px;right:16px;width:100px;height:78px;object-fit:cover;border-radius:12px;border:2px solid rgba(255,255,255,.3);display:none;z-index:3;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+/* Overlay info on video */
+.call-overlay{position:absolute;top:0;left:0;right:0;z-index:5;padding:48px 24px 20px;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);text-align:center;}
+.callpeer{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5);}
+.calltimer{font-size:15px;color:rgba(255,255,255,.7);margin-top:4px;animation:tglow 2s ease infinite;}
+@keyframes tglow{0%,100%{opacity:.7;}50%{opacity:1;color:var(--accent);}}
+.callstat{font-size:13px;color:var(--accent);margin-top:3px;}
+/* Controls at bottom */
+.callctrl{position:relative;z-index:5;padding:28px 24px 40px;display:flex;justify-content:center;align-items:center;gap:18px;background:linear-gradient(to top,rgba(0,0,0,.8),transparent);}
+.ccbtn{width:58px;height:58px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s cubic-bezier(.34,1.56,.64,1);}
+.ccbtn:active{transform:scale(.9);}
+.ccbtn.mute{background:rgba(255,255,255,.15);color:#fff;backdrop-filter:blur(8px);}
 .ccbtn.mute.on{background:var(--warn);color:#000;}
-.ccbtn.vid{background:var(--surface2);color:var(--text);}
-.ccbtn.vid.off{background:var(--surface3);color:var(--muted);}
-.ccbtn.end{background:var(--danger);color:#fff;}
+.ccbtn.vid{background:rgba(255,255,255,.15);color:#fff;backdrop-filter:blur(8px);}
+.ccbtn.vid.off{background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);}
+.ccbtn.end{background:var(--danger);color:#fff;width:68px;height:68px;font-size:22px;}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;color:var(--text);z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.4);transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .3s;opacity:0;white-space:nowrap;}
@@ -550,18 +559,20 @@ input,textarea{font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
-<!-- ACTIVE CALL -->
+<!-- ACTIVE CALL - FULL SCREEN -->
 <div class="moverlay" id="mo-ca">
   <div class="mcard">
     <div class="callvids">
-      <div class="callph" id="call-ph">😎</div>
+      <div class="callph" id="call-ph">
+        <div class="callph-av" id="call-ph-av">😎</div>
+      </div>
       <video id="vr" autoplay playsinline></video>
       <video id="vl" autoplay playsinline muted></video>
-    </div>
-    <div class="callmeta">
-      <div class="callpeer" id="call-peer">Calling...</div>
-      <div class="calltimer" id="call-timer">00:00</div>
-      <div class="callstat" id="call-stat">Connecting...</div>
+      <div class="call-overlay">
+        <div class="callpeer" id="call-peer">Calling...</div>
+        <div class="calltimer" id="call-timer">00:00</div>
+        <div class="callstat" id="call-stat">Connecting...</div>
+      </div>
     </div>
     <div class="callctrl">
       <button class="ccbtn mute" id="btn-mute" onclick="toggleMute()">🎤</button>
@@ -1032,6 +1043,10 @@ function setAv(el, user){
     el.textContent=(user&&user.emoji)||'😎';
   }
 }
+// Make call screen fullscreen
+function goFullscreen(){
+  try{ document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); }catch(e){}
+}
 function avStr(user, sz, cls){
   sz=sz||40; cls=cls||'mav';
   var fs=Math.round(sz*0.42);
@@ -1106,9 +1121,10 @@ function startCall(type){
       db.ref('signals/'+activeCallId+'/eCands').on('child_added',snap=>{if(pc.remoteDescription)pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});});
       db.ref('signals/'+activeCallId+'/status').on('value',snap=>{if(snap.val()==='ended')endCall();});
     });
-    $('call-peer').textContent=ACT_OTHER.name||'User';setAv($('call-ph'),ACT_OTHER);$('call-ph').style.cssText='width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;background:var(--surface2)';$('vr').style.display='none';$('call-stat').textContent='Calling...';$('call-timer').textContent='00:00';
+    $('call-peer').textContent=ACT_OTHER.name||'User';setAv($('call-ph-av'),ACT_OTHER);$('vr').style.display='none';$('call-stat').textContent='Calling...';$('call-timer').textContent='00:00';
     playRingtone();
     openM('mo-ca');
+    setTimeout(goFullscreen,300);
   }).catch(()=>alert('Camera/mic access denied.'));
 }
 function acceptCall(){
@@ -1132,8 +1148,8 @@ function acceptCall(){
         });
       });
     });
-    $('call-peer').textContent=pendingCall.callerName||'User';setAv($('call-ph'),{photo:pendingCall.callerPhoto,color:pendingCall.callerColor,emoji:pendingCall.callerEmoji});$('call-ph').style.cssText='width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;background:var(--surface2)';$('vr').style.display='none';$('call-stat').textContent='Connecting...';
-    openM('mo-ca'); db.ref('incomingCalls/'+ME.uid).remove(); pendingCall=null;
+    $('call-peer').textContent=pendingCall.callerName||'User';setAv($('call-ph-av'),{photo:pendingCall.callerPhoto,color:pendingCall.callerColor,emoji:pendingCall.callerEmoji});$('vr').style.display='none';$('call-stat').textContent='Connecting...';
+    openM('mo-ca'); setTimeout(goFullscreen,300); db.ref('incomingCalls/'+ME.uid).remove(); pendingCall=null;
   }).catch(()=>alert('Camera/mic access denied.'));
 }
 function rejectCall(){stopRingtone();closeM('mo-cin');if(pendingCall){db.ref('signals/'+pendingCall.callId).update({status:'ended'});db.ref('incomingCalls/'+ME.uid).remove();pendingCall=null;}}
@@ -1145,7 +1161,7 @@ function endCall(){
   $('vr').srcObject=null;$('vr').style.display='none';$('vl').srcObject=null;$('vl').style.display='none';$('call-ph').style.display='flex';
   activeCallId=null;isMuted=false;isVidOff=false;
   $('btn-mute').classList.remove('on');$('btn-vid').classList.remove('off');$('btn-mute').textContent='🎤';$('btn-vid').textContent='📹';
-  closeM('mo-ca');
+  try{document.exitFullscreen&&document.exitFullscreen();}catch(e){} closeM('mo-ca');
 }
 function startTick(){callSecs=0;callTick=setInterval(()=>{callSecs++;$('call-timer').textContent=fmtS(callSecs);},1000);stopRingtone();}
 function stopTick(){if(callTick){clearInterval(callTick);callTick=null;}}

@@ -92,6 +92,12 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 .avprev{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;border:3px solid var(--border2);position:relative;transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
 .avprev:active{transform:scale(.9);}
 .avbadge{position:absolute;bottom:2px;right:2px;width:22px;height:22px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;}
+.avprev img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+.photo-upload-btn{display:flex;align-items:center;gap:8px;padding:9px 16px;background:var(--surface2);border:1px dashed var(--border2);border-radius:11px;color:var(--muted);font-size:13px;cursor:pointer;transition:all .2s;width:100%;justify-content:center;}
+.photo-upload-btn:hover{border-color:var(--accent);color:var(--accent);}
+.photo-divider{display:flex;align-items:center;gap:10px;width:100%;}
+.photo-divider::before,.photo-divider::after{content:"";flex:1;height:1px;background:var(--border2);}
+.photo-divider span{font-size:11px;color:var(--muted);white-space:nowrap;}
 .avemojis{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
 .avem{width:34px;height:34px;border-radius:9px;background:var(--surface2);border:1px solid var(--border2);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .15s cubic-bezier(.34,1.56,.64,1);}
 .avem:hover,.avem.sel{background:var(--adim);border-color:var(--accent);transform:scale(1.15);}
@@ -415,6 +421,9 @@ input,textarea{font-family:'DM Sans',sans-serif;}
     <div class="ssub">Pick an avatar and add a bio.</div>
     <div class="avp">
       <div class="avprev" id="avprev" style="background:linear-gradient(135deg,#6c63ff,#9c63ff)">😎<div class="avbadge">✏️</div></div>
+      <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+      <label for="photo-input" class="photo-upload-btn">📷 Upload Photo</label>
+      <div class="photo-divider"><span>or choose avatar</span></div>
       <div class="avemojis" id="avemojis"></div>
       <div class="avcols" id="avcols"></div>
     </div>
@@ -592,7 +601,7 @@ let pending2FAUser=null;
 
 const COLORS=['linear-gradient(135deg,#6c63ff,#9c63ff)','linear-gradient(135deg,#00e5c8,#00a896)','linear-gradient(135deg,#ff6b6b,#ee5a24)','linear-gradient(135deg,#f9ca24,#f0932b)','linear-gradient(135deg,#6ab04c,#badc58)','linear-gradient(135deg,#e84393,#a855f7)'];
 const EMOJIS=['😎','😊','🔥','⚡','🌙','🎯','👾','🦋','🐉','🌊','🎭','🚀'];
-let cEmoji='😎',cColor=COLORS[0];
+let cEmoji='😎',cColor=COLORS[0],cPhoto=null;
 
 // UTILS
 const $=id=>document.getElementById(id);
@@ -778,8 +787,8 @@ window.doSetName=doSetName;
 function doSetProfile(skip){
   const u=auth.currentUser;
   const bio=skip?'':$('sp-bio').value.trim();
-  db.ref('users/'+u.uid).update({emoji:skip?'😎':cEmoji,color:skip?COLORS[0]:cColor,bio}).then(()=>{
-    db.ref('users/'+u.uid).once('value').then(snap=>{ME=snap.val();enterApp();});
+  db.ref('users/'+u.uid).update({emoji:skip?'😎':cEmoji,color:skip?COLORS[0]:cColor,bio,photo:cPhoto||null}).then(()=>{
+    db.ref('users/'+u.uid).once('value').then(snap=>{ME=snap.val();cPhoto=null;enterApp();});
   });
 }
 window.doSetProfile=doSetProfile;
@@ -787,7 +796,7 @@ window.doSetProfile=doSetProfile;
 // ENTER APP
 function enterApp(){
   const av=$('me-av');
-  av.style.background=ME.color||COLORS[0]; av.textContent=ME.emoji||'😎';
+  setAv(av, ME);
   const dot=document.createElement('div');dot.className='medot';av.appendChild(dot);
   $('me-nm').textContent=ME.name||'You';
   show('s-app');
@@ -804,15 +813,15 @@ function cleanAll(){
 
 // PROFILE
 function openMyPf(){
-  $('pf-av').style.background=ME.color||COLORS[0]; $('pf-av').textContent=ME.emoji||'😎';
+  setAv($('pf-av'), ME);
   $('pf-nm').textContent=ME.name; $('pf-em').textContent=ME.email; $('pf-bio').textContent=ME.bio||'';
   $('tfa-toggle').classList.toggle('on',!!ME.twoFA);
   openM('mo-me');
 }
 window.openMyPf=openMyPf;
 function goEditPf(){
-  closeM('mo-me'); cEmoji=ME.emoji||'😎'; cColor=ME.color||COLORS[0]; initPicker();
-  $('avprev').style.background=cColor; $('avprev').innerHTML=cEmoji+'<div class="avbadge">✏️</div>';
+  closeM('mo-me'); cEmoji=ME.emoji||'😎'; cColor=ME.color||COLORS[0]; cPhoto=ME.photo||null; initPicker();
+  if(cPhoto){ $('avprev').style.background='#000'; $('avprev').innerHTML='<img src="'+cPhoto+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover"><div class="avbadge">✏️</div>'; } else { $('avprev').style.background=cColor; $('avprev').innerHTML=cEmoji+'<div class="avbadge">✏️</div>'; }
   $('sp-bio').value=ME.bio||''; show('s-pf');
 }
 window.goEditPf=goEditPf;
@@ -830,7 +839,7 @@ function openOtherPf(){
   if(!ACT_OTHER)return;
   db.ref('users/'+ACT_OTHER.uid).once('value').then(snap=>{
     const u=snap.val()||ACT_OTHER;
-    $('op-av').style.background=u.color||COLORS[0]; $('op-av').textContent=u.emoji||'😎';
+    setAv($('op-av'), u);
     $('op-nm').textContent=u.name||'User'; $('op-em').textContent=u.email||''; $('op-bio').textContent=u.bio||'No bio yet.';
     openM('mo-other');
   });
@@ -851,7 +860,7 @@ function renderChats(list){
   if(!list.length){el.innerHTML='<div class="emptylist">No chats yet.<br>Tap ✏️ to start!</div>';return;}
   el.innerHTML=list.map(c=>`
     <div class="cr${ACT_CID===c.chatId?' on':''}" data-cid="${c.chatId}">
-      <div class="crav" style="background:${c.otherColor||COLORS[0]}">${c.otherEmoji||'😎'}<div class="crdot"></div></div>
+      ${avStr({photo:c.otherPhoto,color:c.otherColor,emoji:c.otherEmoji},40,'crav')}
       <div class="crinfo">
         <div class="crname">${esc(c.otherName||c.otherEmail)}</div>
         <div class="crprev">${esc(c.lastMsg||'Say hi!')}</div>
@@ -874,9 +883,9 @@ function startChat(){
     if(!found){e.textContent='User not found. They must sign up first.';return;}
     e.textContent='';
     const cid=mkCid(ME.uid,found.uid);
-    const d={chatId:cid,otherUid:found.uid,otherName:found.name,otherEmail:found.email,otherEmoji:found.emoji||'😎',otherColor:found.color||COLORS[0],lastMsg:'',lastTime:Date.now()};
+    const d={chatId:cid,otherUid:found.uid,otherName:found.name,otherEmail:found.email,otherEmoji:found.emoji||'😎',otherColor:found.color||COLORS[0],otherPhoto:found.photo||null,lastMsg:'',lastTime:Date.now()};
     db.ref('userChats/'+ME.uid+'/'+cid).update(d);
-    db.ref('userChats/'+found.uid+'/'+cid).update({chatId:cid,otherUid:ME.uid,otherName:ME.name,otherEmail:ME.email,otherEmoji:ME.emoji||'😎',otherColor:ME.color||COLORS[0],lastMsg:'',lastTime:Date.now()});
+    db.ref('userChats/'+found.uid+'/'+cid).update({chatId:cid,otherUid:ME.uid,otherName:ME.name,otherEmail:ME.email,otherEmoji:ME.emoji||'😎',otherColor:ME.color||COLORS[0],otherPhoto:ME.photo||null,lastMsg:'',lastTime:Date.now()});
     $('ncp-em').value=''; $('ncp').classList.remove('open');
     chatMap[cid]=d; openChat(cid);
   });
@@ -886,7 +895,7 @@ function openChat(cid){
   const c=chatMap[cid]; if(!c)return;
   ACT_CID=cid; ACT_OTHER={uid:c.otherUid,name:c.otherName,email:c.otherEmail,emoji:c.otherEmoji,color:c.otherColor};
   $('caempty').style.display='none'; var cm=$('camain'); cm.style.display='flex'; cm.style.flexDirection='column'; cm.style.height='100%';
-  $('chav').style.background=c.otherColor||COLORS[0]; $('chav').textContent=c.otherEmoji||'😎';
+  setAv($('chav'), {photo:c.otherPhoto,color:c.otherColor,emoji:c.otherEmoji});
   $('chname').textContent=c.otherName||c.otherEmail;
   if(isMob()) $('sb').classList.add('hide');
   if(msgL){msgL.off();msgL=null;}
@@ -901,7 +910,7 @@ function openChat(cid){
   });
   // Listen typing
   const tav=$('typing-av');
-  if(tav){tav.style.background=c.otherColor||COLORS[0];tav.textContent=c.otherEmoji||'😎';}
+  if(tav) setAv(tav,{photo:c.otherPhoto,color:c.otherColor,emoji:c.otherEmoji});
   typingL=db.ref('typing/'+cid);
   typingL.on('value',snap=>{
     const data=snap.val()||{};
@@ -935,7 +944,7 @@ function renderMsgs(msgs){
     const sep=d!==lastD?`<div class="dsep">${d===new Date().toDateString()?'Today':d}</div>`:'';
     lastD=d;
     const sent=m.senderId===ME.uid;
-    const avHtml=!sent?`<div class="mav" style="background:${m.sc||COLORS[0]}">${m.se||'😎'}</div>`:'';
+    const avHtml=!sent?avStr({photo:m.sp,color:m.sc,emoji:m.se},24,'mav'):'';
     // Tick for sent messages
     let tick='';
     if(sent){
@@ -960,7 +969,7 @@ function sendMsg(){
   ta.value=''; ta.style.height='auto';
   // Clear typing
   db.ref('typing/'+ACT_CID+'/'+ME.uid).remove();
-  const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],time:Date.now(),seen:false};
+  const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],sp:ME.photo||null,time:Date.now(),seen:false};
   db.ref('messages/'+ACT_CID).push(msg);
   ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:Date.now()}));
 }
@@ -977,10 +986,63 @@ window.handleTyping=handleTyping;
 
 // VOICE
 function startRec(e){if(e)e.preventDefault();if(!ACT_CID)return;navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{audioChunks=[];mediaRec=new MediaRecorder(stream);mediaRec.ondataavailable=ev=>audioChunks.push(ev.data);mediaRec.start();isRec=true;$('micbtn').classList.add('rec');$('rechint').classList.add('show');}).catch(()=>alert('Microphone access denied.'));}
-function stopRec(){if(!isRec||!mediaRec)return;isRec=false;$('micbtn').classList.remove('rec');$('rechint').classList.remove('show');mediaRec.onstop=()=>{const blob=new Blob(audioChunks,{type:'audio/webm'});mediaRec.stream.getTracks().forEach(t=>t.stop());const reader=new FileReader();reader.onloadend=()=>{const dur=fmtS(Math.max(1,Math.round(blob.size/8000)));const msg={type:'voice',voiceData:reader.result,dur,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],time:Date.now(),seen:false};db.ref('messages/'+ACT_CID).push(msg);ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:'🎤 Voice message',lastTime:Date.now()}));};reader.readAsDataURL(blob);};mediaRec.stop();}
+function stopRec(){if(!isRec||!mediaRec)return;isRec=false;$('micbtn').classList.remove('rec');$('rechint').classList.remove('show');mediaRec.onstop=()=>{const blob=new Blob(audioChunks,{type:'audio/webm'});mediaRec.stream.getTracks().forEach(t=>t.stop());const reader=new FileReader();reader.onloadend=()=>{const dur=fmtS(Math.max(1,Math.round(blob.size/8000)));const msg={type:'voice',voiceData:reader.result,dur,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],sp:ME.photo||null,time:Date.now(),seen:false};db.ref('messages/'+ACT_CID).push(msg);ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:'🎤 Voice message',lastTime:Date.now()}));};reader.readAsDataURL(blob);};mediaRec.stop();}
 function cancelRec(){if(!isRec||!mediaRec)return;isRec=false;mediaRec.stream?.getTracks().forEach(t=>t.stop());mediaRec.stop();$('micbtn').classList.remove('rec');$('rechint').classList.remove('show');audioChunks=[];}
 function playV(aid,btn){const au=$(aid);if(!au)return;if(au.paused){au.play();btn.textContent='⏸';au.onended=()=>{btn.textContent='▶';};}else{au.pause();btn.textContent='▶';}}
 window.startRec=startRec;window.stopRec=stopRec;window.cancelRec=cancelRec;window.playV=playV;
+
+// ── PHOTO UPLOAD ──
+function handlePhotoUpload(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = function(){
+      // Compress to 200x200
+      const canvas = document.createElement("canvas");
+      canvas.width = 200; canvas.height = 200;
+      const ctx = canvas.getContext("2d");
+      // Crop to square
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+      cPhoto = canvas.toDataURL("image/jpeg", 0.75);
+      // Show preview
+      const prev = document.getElementById("avprev");
+      prev.innerHTML = "<img src= + cPhoto + ><div class=\"avbadge\">✏️</div>";
+      prev.style.background = "transparent";
+      // Reset file input
+      e.target.value = "";
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+window.handlePhotoUpload = handlePhotoUpload;
+
+// ── AVATAR HELPER ──
+function setAv(el, user){
+  if(!el) return;
+  if(user && user.photo){
+    el.style.background='#000';
+    el.innerHTML='<img src="'+user.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block">';
+  } else {
+    el.style.background=(user&&user.color)||'linear-gradient(135deg,#6c63ff,#9c63ff)';
+    el.textContent=(user&&user.emoji)||'😎';
+  }
+}
+function avStr(user, sz, cls){
+  sz=sz||40; cls=cls||'mav';
+  var fs=Math.round(sz*0.42);
+  if(user&&user.photo){
+    return '<div class="'+cls+'" style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;overflow:hidden;background:#000;flex-shrink:0"><img src="'+user.photo+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  }
+  var bg=(user&&user.color)||'linear-gradient(135deg,#6c63ff,#9c63ff)';
+  var em=(user&&user.emoji)||'😎';
+  return '<div class="'+cls+'" style="width:'+sz+'px;height:'+sz+'px;background:'+bg+';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:'+fs+'px;flex-shrink:0">'+em+'</div>';
+}
+
 
 // RINGTONE (Web Audio API)
 function playRingtone(){
@@ -1017,7 +1079,7 @@ function listenCalls(){
     const d=snap.val();
     if(d&&d.callId&&d.status!=='ended'){
       pendingCall=d;
-      $('ci-av').style.background=d.callerColor||COLORS[0];$('ci-av').textContent=d.callerEmoji||'😎';
+      setAv($('ci-av'),{photo:d.callerPhoto,color:d.callerColor,emoji:d.callerEmoji});
       $('ci-nm').textContent=d.callerName||'Someone';
       $('ci-tp').textContent=d.type==='video'?'📹 Video calling...':'📞 Voice calling...';
       playRingtone();
@@ -1039,12 +1101,12 @@ function startCall(type){
     pc.createOffer().then(offer=>{
       pc.setLocalDescription(offer);
       db.ref('signals/'+activeCallId).set({offer:{type:offer.type,sdp:offer.sdp},callerId:ME.uid,calleeId:ACT_OTHER.uid,type,status:'calling'});
-      db.ref('incomingCalls/'+ACT_OTHER.uid).set({callId:activeCallId,callerId:ME.uid,callerName:ME.name,callerEmoji:ME.emoji||'😎',callerColor:ME.color||COLORS[0],type,status:'calling'});
+      db.ref('incomingCalls/'+ACT_OTHER.uid).set({callId:activeCallId,callerId:ME.uid,callerName:ME.name,callerEmoji:ME.emoji||'😎',callerColor:ME.color||COLORS[0],callerPhoto:ME.photo||null,type,status:'calling'});
       db.ref('signals/'+activeCallId+'/answer').on('value',snap=>{if(snap.val()&&!pc.currentRemoteDescription)pc.setRemoteDescription(new RTCSessionDescription(snap.val()));});
       db.ref('signals/'+activeCallId+'/eCands').on('child_added',snap=>{if(pc.remoteDescription)pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});});
       db.ref('signals/'+activeCallId+'/status').on('value',snap=>{if(snap.val()==='ended')endCall();});
     });
-    $('call-peer').textContent=ACT_OTHER.name||'User';$('call-ph').textContent=ACT_OTHER.emoji||'😎';$('call-ph').style.display='flex';$('vr').style.display='none';$('call-stat').textContent='Calling...';$('call-timer').textContent='00:00';
+    $('call-peer').textContent=ACT_OTHER.name||'User';setAv($('call-ph'),ACT_OTHER);$('call-ph').style.cssText='width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;background:var(--surface2)';$('vr').style.display='none';$('call-stat').textContent='Calling...';$('call-timer').textContent='00:00';
     playRingtone();
     openM('mo-ca');
   }).catch(()=>alert('Camera/mic access denied.'));
@@ -1070,7 +1132,7 @@ function acceptCall(){
         });
       });
     });
-    $('call-peer').textContent=pendingCall.callerName||'User';$('call-ph').textContent=pendingCall.callerEmoji||'😎';$('call-ph').style.display='flex';$('vr').style.display='none';$('call-stat').textContent='Connecting...';
+    $('call-peer').textContent=pendingCall.callerName||'User';setAv($('call-ph'),{photo:pendingCall.callerPhoto,color:pendingCall.callerColor,emoji:pendingCall.callerEmoji});$('call-ph').style.cssText='width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:56px;background:var(--surface2)';$('vr').style.display='none';$('call-stat').textContent='Connecting...';
     openM('mo-ca'); db.ref('incomingCalls/'+ME.uid).remove(); pendingCall=null;
   }).catch(()=>alert('Camera/mic access denied.'));
 }

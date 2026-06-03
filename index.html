@@ -25,7 +25,7 @@
   window._clearFallback = function(){ clearTimeout(t); };
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#080a0f;--surface:#0e1118;--surface2:#161b26;--surface3:#1e2436;
@@ -1274,14 +1274,11 @@ function doReg(){
   if(pw.length<6){e.textContent='Password must be 6+ characters.';return;}
   e.textContent='Creating account...';
   auth.createUserWithEmailAndPassword(em,pw).then(data=>{
-    // Supabase sends verification email automatically if configured
     e.textContent='';
     $('a-ok').textContent='✓ Account created! Check your email to verify.';
+    const verEl=$('verify-email-shown');
+    if(verEl) verEl.textContent=em;
   }).catch(err=>{ e.textContent=err.message; });
-      e.textContent='';
-      $('verify-email-shown').textContent=em;
-      show('s-verify');
-    });
 }
 window.doReg=doReg;
 

@@ -25,9 +25,7 @@
   window._clearFallback = function(){ clearTimeout(t); };
 })();
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#080a0f;--surface:#0e1118;--surface2:#161b26;--surface3:#1e2436;
@@ -954,17 +952,219 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 </div>
 
 <script>
-firebase.initializeApp({
-  apiKey:"AIzaSyAELh52zsVqUQOOka0U7nawPh4DEPqV6qc",
-  authDomain:"raychat-rt.firebaseapp.com",
-  databaseURL:"https://raychat-rt-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"raychat-rt",
-  storageBucket:"raychat-rt.firebasestorage.app",
-  messagingSenderId:"96488181209",
-  appId:"1:96488181209:web:e73cd137f1beff3fc99dc8"
+// ════════════════════════════════════════════════
+//  ⚙️  SUPABASE CONFIG — আপনার নিজের credentials দিন
+//  1. https://supabase.com তে project তৈরি করুন
+//  2. Settings > API থেকে URL ও anon key নিন
+//  3. নিচের দুটো value বদলান
+// ════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co';  // ← বদলান
+const SUPABASE_KEY  = 'YOUR_ANON_KEY';                      // ← বদলান
+// ════════════════════════════════════════════════
+
+const { createClient } = supabase;
+const _supa = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  realtime: { params: { eventsPerSecond: 10 } }
 });
-const auth    = firebase.auth();
-const db      = firebase.database();
+
+// ── Supabase Auth wrapper (Firebase-compatible API) ──
+const auth = {
+  _listeners: [],
+  onAuthStateChanged(cb){
+    // Initial session
+    _supa.auth.getSession().then(({data:{session}})=>cb(session?.user||null));
+    // Subscribe to changes
+    _supa.auth.onAuthStateChange((_,session)=>cb(session?.user||null));
+  },
+  signInWithEmailAndPassword(email,password){
+    return _supa.auth.signInWithPassword({email,password})
+      .then(({data,error})=>{ if(error) throw {message:error.message}; return data; });
+  },
+  createUserWithEmailAndPassword(email,password){
+    return _supa.auth.signUp({email,password})
+      .then(({data,error})=>{ if(error) throw {message:error.message}; return data; });
+  },
+  signOut(){ return _supa.auth.signOut(); },
+  get currentUser(){ return _supa.auth.getSession()._promise?.then?.(r=>r?.data?.session?.user)||null; }
+};
+
+// Synchronous currentUser via cached session
+let _currentUser = null;
+_supa.auth.getSession().then(({data:{session}})=>{ _currentUser = session?.user||null; });
+_supa.auth.onAuthStateChange((_,session)=>{ _currentUser = session?.user||null; });
+Object.defineProperty(auth,'currentUser',{ get(){ return _currentUser; } });
+
+// ── DB wrapper: maps Firebase-style calls to Supabase Realtime DB (via tables) ──
+// Data structure: all data in one "store" table: { path TEXT PK, data JSONB, updated_at }
+// Realtime uses Supabase Realtime on that table.
+
+// In-memory store for offline-like reads
+const _store = {};
+const _listeners = {}; // path -> [callbacks]
+
+async function _dbGet(path){
+  const { data, error } = await _supa.from('store').select('data').eq('path', path).maybeSingle();
+  if(error) return null;
+  return data?.data ?? null;
+}
+async function _dbSet(path, value){
+  if(value === null){
+    await _supa.from('store').delete().eq('path', path);
+    return;
+  }
+  await _supa.from('store').upsert({ path, data: value, updated_at: new Date().toISOString() });
+}
+async function _dbUpdate(path, value){
+  const existing = await _dbGet(path) || {};
+  const merged = { ...existing, ...value };
+  await _dbSet(path, merged);
+}
+async function _dbPush(path, value){
+  // Generate unique key like Firebase push
+  const key = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const fullPath = path + '/' + key;
+  await _dbSet(fullPath, { ...value, _key: key });
+  return { key };
+}
+async function _dbGetChildren(path){
+  // Get all rows that start with this path
+  const { data, error } = await _supa.from('store').select('path,data').like('path', path + '%');
+  if(error || !data) return {};
+  const result = {};
+  data.forEach(row => {
+    const rel = row.path.slice(path.length + 1);
+    if(!rel.includes('/')) { // direct children only
+      result[rel] = row.data;
+    } else {
+      // nested: build structure
+      const parts = rel.split('/');
+      let cur = result;
+      parts.forEach((p, i) => {
+        if(i === parts.length - 1) cur[p] = row.data;
+        else { cur[p] = cur[p] || {}; cur = cur[p]; }
+      });
+    }
+  });
+  return result;
+}
+
+// Realtime subscriptions map
+const _realtimeSubs = {};
+
+// Firebase-compatible db object
+const db = {
+  ref(path){
+    return {
+      path,
+      once(event, cb){
+        return (async()=>{
+          let val;
+          // Check if path has children or direct value
+          const direct = await _dbGet(path);
+          if(direct !== null){
+            val = direct;
+          } else {
+            val = await _dbGetChildren(path);
+            if(!Object.keys(val).length) val = null;
+          }
+          const snap = _makeSnap(path, val);
+          if(cb) cb(snap); return snap;
+        })();
+      },
+      on(event, cb){
+        // Initial fetch
+        this.once(event, cb);
+        // Subscribe to realtime
+        const channel = _supa.channel('db-' + path.replace(/\//g,'-') + '-' + Math.random().toString(36).slice(2,6))
+          .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'store',
+            filter: 'path=ilike.' + path + '%'
+          }, async () => {
+            // Re-fetch and call cb
+            const direct = await _dbGet(path);
+            let val;
+            if(direct !== null){ val = direct; }
+            else { val = await _dbGetChildren(path); if(!Object.keys(val).length) val=null; }
+            cb(_makeSnap(path, val));
+          })
+          .subscribe();
+        if(!_realtimeSubs[path]) _realtimeSubs[path] = [];
+        _realtimeSubs[path].push({channel, cb});
+        return { off(){ channel.unsubscribe(); } };
+      },
+      off(){
+        if(_realtimeSubs[path]){
+          _realtimeSubs[path].forEach(({channel})=>channel.unsubscribe());
+          delete _realtimeSubs[path];
+        }
+      },
+      set(value){ return _dbSet(path, value); },
+      update(value){ return _dbUpdate(path, value); },
+      remove(){ return _dbSet(path, null); },
+      push(value){
+        if(value === undefined) return { set: (v) => _dbPush(path, v) };
+        return _dbPush(path, value);
+      },
+      orderByChild(){ return this; },
+      limitToLast(n){
+        const orig = this;
+        return {
+          ...orig,
+          once(event, cb){
+            return (async()=>{
+              const children = await _dbGetChildren(path);
+              let arr = Object.entries(children).map(([k,v])=>({...v, _key:k}));
+              arr.sort((a,b)=>(a.time||0)-(b.time||0));
+              arr = arr.slice(-n);
+              const obj = {};
+              arr.forEach(item=>{ const k=item._key||item.time; obj[k]=item; });
+              const snap = _makeSnap(path, obj);
+              if(cb) cb(snap); return snap;
+            })();
+          },
+          on(event, cb){
+            // Initial fetch with limit
+            this.once(event, cb);
+            const channel = _supa.channel('db-lim-' + path.replace(/\//g,'-') + '-' + Math.random().toString(36).slice(2,6))
+              .on('postgres_changes', {
+                event: '*', schema: 'public', table: 'store',
+                filter: 'path=ilike.' + path + '%'
+              }, async () => {
+                const children = await _dbGetChildren(path);
+                let arr = Object.entries(children).map(([k,v])=>({...v,_key:k}));
+                arr.sort((a,b)=>(a.time||0)-(b.time||0));
+                arr = arr.slice(-n);
+                const obj = {};
+                arr.forEach(item=>{ const k=item._key||item.time; obj[k]=item; });
+                cb(_makeSnap(path, obj));
+              }).subscribe();
+            if(!_realtimeSubs[path]) _realtimeSubs[path] = [];
+            _realtimeSubs[path].push({channel, cb});
+            return { off(){ channel.unsubscribe(); } };
+          },
+          off(){ orig.off(); }
+        };
+      },
+      equalTo(val){ return this; },
+      keepSynced(){ /* no-op for Supabase */ }
+    };
+  },
+  goOnline(){ /* no-op */ }
+};
+
+function _makeSnap(path, val){
+  return {
+    val(){ return val; },
+    forEach(cb){
+      if(val && typeof val === 'object'){
+        Object.entries(val).forEach(([k,v])=>{
+          cb({ key: k, val(){ return v; } });
+        });
+      }
+    },
+    exists(){ return val !== null && val !== undefined; }
+  };
+}
 
 // STATE
 let ME=null, ACT_CID=null, ACT_OTHER=null;
@@ -1015,27 +1215,29 @@ initPicker();
 auth.onAuthStateChanged(async user=>{
   if(window._clearFallback) window._clearFallback();
   if(user){
-    // Skip email verification for phone auth users
-    const isPhoneUser = user.providerData.some(p=>p.providerId==='phone');
-    if(!isPhoneUser && !user.emailVerified){
-      $('verify-email-shown').textContent=user.email;
+    // Supabase: check email_confirmed_at for verification
+    const isEmailVerified = user.email_confirmed_at != null || user.app_metadata?.provider === 'phone';
+    if(!isEmailVerified && user.email){
+      const verEl = document.getElementById('verify-email-shown');
+      if(verEl) verEl.textContent = user.email;
       show('s-verify'); return;
     }
     // Check profile
-    const snap=await db.ref('users/'+user.uid).once('value');
+    const snap=await db.ref('users/'+user.id).once('value');
     const data=snap.val();
     if(!data||!data.name){show('s-name');return;}
     ME=data;
     // Check 2FA
     if(data.twoFA){
       pending2FAUser=user;
-      await send2FACode(user.uid);
+      await send2FACode(user.id);
       show('s-2fa');
     } else {
       enterApp();
     }
   } else {
-    cleanAll(); ME=null; ACT_CID=null; ACT_OTHER=null; pending2FAUser=null;
+    if(ME) cleanAll();
+    ME=null; ACT_CID=null; ACT_OTHER=null; pending2FAUser=null;
     show('s-auth');
   }
 });
@@ -1061,7 +1263,7 @@ function doLogin(){
   e.textContent='Signing in...';
   auth.signInWithEmailAndPassword(em,pw)
     .then(()=>e.textContent='')
-    .catch(err=>e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim());
+    .catch(err=>e.textContent=err.message);
 }
 window.doLogin=doLogin;
 
@@ -1071,13 +1273,15 @@ function doReg(){
   if(!em||!pw){e.textContent='Please fill all fields.';return;}
   if(pw.length<6){e.textContent='Password must be 6+ characters.';return;}
   e.textContent='Creating account...';
-  auth.createUserWithEmailAndPassword(em,pw).then(cred=>{
-    cred.user.sendEmailVerification().then(()=>{
+  auth.createUserWithEmailAndPassword(em,pw).then(data=>{
+    // Supabase sends verification email automatically if configured
+    e.textContent='';
+    $('a-ok').textContent='✓ Account created! Check your email to verify.';
+  }).catch(err=>{ e.textContent=err.message; });
       e.textContent='';
       $('verify-email-shown').textContent=em;
       show('s-verify');
     });
-  }).catch(err=>e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim());
 }
 window.doReg=doReg;
 
@@ -1086,10 +1290,11 @@ function doForgot(){
   e.textContent=''; ok.textContent='';
   if(!em){e.textContent='Enter your email.';return;}
   e.textContent='Sending...';
-  auth.sendPasswordResetEmail(em).then(()=>{
+  _supa.auth.resetPasswordForEmail(em).then(({error})=>{
+    if(error){e.textContent=error.message;return;}
     e.textContent=''; ok.textContent='✓ Reset email sent! Check your inbox.';
     setTimeout(()=>atab('login'),3000);
-  }).catch(err=>e.textContent=err.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim());
+  });
 }
 window.doForgot=doForgot;
 
@@ -1097,20 +1302,25 @@ window.doForgot=doForgot;
 function checkVerified(){
   const e=$('verify-err'),ok=$('verify-ok');
   e.textContent=''; ok.textContent='Checking...';
-  auth.currentUser.reload().then(()=>{
-    if(auth.currentUser.emailVerified){
+  // Re-fetch session to see if email was confirmed
+  _supa.auth.getSession().then(({data:{session}})=>{
+    const user = session?.user;
+    if(user && user.email_confirmed_at){
       ok.textContent='✓ Email verified!';
-      setTimeout(()=>auth.currentUser.reload(),500);
+      // Re-trigger auth state change
+      _supa.auth.refreshSession();
     } else {
       ok.textContent=''; e.textContent='Not verified yet. Please click the link in your email.';
     }
   });
 }
 function resendVerify(){
-  auth.currentUser.sendEmailVerification().then(()=>{
-    $('verify-ok').textContent='✓ Verification email resent!';
-    $('verify-err').textContent='';
-  }).catch(err=>$('verify-err').textContent=err.message);
+  const user = auth.currentUser;
+  if(!user) return;
+  _supa.auth.resend({ type: 'signup', email: user.email }).then(({error})=>{
+    if(error) $('verify-err').textContent=error.message;
+    else { $('verify-ok').textContent='✓ Verification email resent!'; $('verify-err').textContent=''; }
+  });
 }
 window.checkVerified=checkVerified; window.resendVerify=resendVerify;
 
@@ -1143,7 +1353,7 @@ document.addEventListener('keydown',e=>{
 async function verify2FA(){
   const code=[0,1,2,3,4,5].map(i=>$('td'+i).value).join('');
   if(code.length!==6){$('tfa-err').textContent='Enter all 6 digits.';return;}
-  const uid=auth.currentUser.uid;
+  const uid=auth.currentUser.id;
   const snap=await db.ref('twoFACodes/'+uid).once('value');
   const data=snap.val();
   if(!data){$('tfa-err').textContent='Code expired. Please sign in again.';return;}
@@ -1160,17 +1370,17 @@ function doSetName(){
   const name=$('sn-i').value.trim();
   if(!name){$('sn-err').textContent='Enter your name.';return;}
   const u=auth.currentUser;
-  u.updateProfile({displayName:name}).then(()=>{
-    const emailOrPhone = u.email || u.phoneNumber || '';
-    db.ref('users/'+u.uid).set({uid:u.uid,email:emailOrPhone,phone:u.phoneNumber||'',name,emoji:'😎',color:COLORS[0],bio:'',twoFA:false}).then(()=>{cEmoji='😎';cColor=COLORS[0];initPicker();show('s-pf');});
+  const emailOrPhone = u.email || u.phone || '';
+  _supa.auth.updateUser({data:{displayName:name}}).then(()=>{
+    db.ref('users/'+u.id).set({uid:u.id,email:emailOrPhone,phone:u.phone||'',name,emoji:'😎',color:COLORS[0],bio:'',twoFA:false}).then(()=>{cEmoji='😎';cColor=COLORS[0];initPicker();show('s-pf');});
   });
 }
 window.doSetName=doSetName;
 function doSetProfile(skip){
   const u=auth.currentUser;
   const bio=skip?'':$('sp-bio').value.trim();
-  db.ref('users/'+u.uid).update({emoji:skip?'😎':cEmoji,color:skip?COLORS[0]:cColor,bio,photo:cPhoto||null}).then(()=>{
-    db.ref('users/'+u.uid).once('value').then(snap=>{ME=snap.val();cPhoto=null;enterApp();});
+  db.ref('users/'+u.id).update({emoji:skip?'😎':cEmoji,color:skip?COLORS[0]:cColor,bio,photo:cPhoto||null}).then(()=>{
+    db.ref('users/'+u.id).once('value').then(snap=>{ME=snap.val();cPhoto=null;enterApp();});
   });
 }
 window.doSetProfile=doSetProfile;
@@ -1190,7 +1400,7 @@ function enterApp(){
 function cleanAll(){
   if(msgL){msgL.off();msgL=null;} if(chatsL){chatsL.off();chatsL=null;}
   if(callL){callL.off();callL=null;} if(typingL){typingL.off();typingL=null;}
-  db.ref("friendRequests/"+ME.uid+"/incoming").off();
+  if(ME) db.ref("friendRequests/"+ME.uid+"/incoming").off();
   stopRingtone();
 }
 
@@ -1901,15 +2111,7 @@ function hidePhoneAuth(){
 window.showPhoneAuth = showPhoneAuth;
 window.hidePhoneAuth = hidePhoneAuth;
 
-function initRecaptcha(){
-  try{
-    if(recaptchaVerifier) recaptchaVerifier.clear();
-    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container',{
-      size: 'invisible',
-      callback: () => {}
-    });
-  } catch(e){ console.error('reCAPTCHA error:', e); }
-}
+function initRecaptcha(){ /* Supabase doesn't need reCAPTCHA for phone auth */ }
 
 async function sendOTP(){
   const code   = document.getElementById('country-code').value;
@@ -1925,22 +2127,21 @@ async function sendOTP(){
   err.textContent = 'Sending OTP...';
 
   try{
-    initRecaptcha();
-    confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, recaptchaVerifier);
+    const { error } = await _supa.auth.signInWithOtp({ phone });
+    if(error) throw error;
     err.textContent = '';
     // Show OTP screen
     document.getElementById('otp-phone-shown').textContent = phone;
-    // Clear OTP digits
     for(let i=0;i<6;i++) document.getElementById('od'+i).value='';
     document.getElementById('otp-err').textContent = '';
     show('s-otp');
     document.getElementById('od0').focus();
     startResendTimer();
     otpPending = true;
+    // Store phone for verification
+    window._otpPhone = phone;
   } catch(e){
-    err.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim();
-    try{ recaptchaVerifier.clear(); }catch(x){}
-    recaptchaVerifier = null;
+    err.textContent = e.message;
   }
 }
 window.sendOTP = sendOTP;
@@ -1966,18 +2167,18 @@ document.addEventListener('keydown', e=>{
 });
 
 async function verifyOTP(){
-  if(!confirmationResult){ document.getElementById('otp-err').textContent='Session expired. Go back and try again.'; return; }
+  if(!window._otpPhone){ document.getElementById('otp-err').textContent='Session expired. Go back and try again.'; return; }
   const code = [0,1,2,3,4,5].map(i=>document.getElementById('od'+i).value).join('');
   if(code.length !== 6){ document.getElementById('otp-err').textContent = 'Enter all 6 digits.'; return; }
   document.getElementById('otp-err').textContent = 'Verifying...';
   try{
-    await confirmationResult.confirm(code);
+    const { error } = await _supa.auth.verifyOtp({ phone: window._otpPhone, token: code, type: 'sms' });
+    if(error) throw error;
     // onAuthStateChanged will handle the rest
     document.getElementById('otp-err').textContent = '';
     clearResendTimer();
   } catch(e){
     document.getElementById('otp-err').textContent = 'Wrong code. Try again.';
-    // Clear digits
     for(let i=0;i<6;i++) document.getElementById('od'+i).value='';
     document.getElementById('od0').focus();
   }
@@ -2021,25 +2222,17 @@ function clearResendTimer(){
 // Phone users may not have emailVerified, so we skip that check for them
 
 
-// ── OFFLINE SUPPORT ──
+// ── OFFLINE SUPPORT (Supabase) ──
 
-// 1. Firebase RTDB offline persistence (caches data & queues writes)
-try { firebase.database().setPersistenceEnabled(true); } catch(e) {}
+// 1. No-op: Supabase doesn't need setPersistenceEnabled
+// try { firebase.database().setPersistenceEnabled(true); } catch(e) {}
 
-// 2. Keep important refs synced for offline access
-function enableOfflineSync(uid){
-  try{
-    firebase.database().ref('userChats/'+uid).keepSynced(true);
-    firebase.database().ref('users').keepSynced(true);
-    firebase.database().ref('friends/'+uid).keepSynced(true);
-  } catch(e){}
-}
+// 2. enableOfflineSync is no-op for Supabase (realtime handles it)
+function enableOfflineSync(uid){ /* Supabase realtime auto-syncs */ }
 
 // 3. Register Service Worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(reg=>{
-    console.log('SW registered');
-  }).catch(e=>console.log('SW failed:', e));
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 
 // 4. Online / Offline indicator
@@ -2051,16 +2244,18 @@ let wasOffline = false;
 function updateOnlineStatus(){
   if(!navigator.onLine){
     wasOffline = true;
-    offIcon.textContent  = '📡';
-    offMsg.textContent   = 'You are offline — messages will send when reconnected';
-    offBar.classList.remove('online');
-    offBar.classList.add('show');
+    if(offIcon) offIcon.textContent = '📡';
+    if(offMsg) offMsg.textContent = 'You are offline — messages will send when reconnected';
+    if(offBar){ offBar.classList.remove('online'); offBar.classList.add('show'); }
+    const chst = document.getElementById('chst');
+    if(chst){ chst.textContent='○ Offline'; chst.style.color='var(--danger)'; }
   } else {
+    const chst = document.getElementById('chst');
+    if(chst){ chst.textContent='● Online'; chst.style.color='var(--green)'; }
     if(wasOffline){
-      offIcon.textContent = '✅';
-      offMsg.textContent  = 'Back online! Syncing messages...';
-      offBar.classList.add('online');
-      setTimeout(()=>{ offBar.classList.remove('show'); wasOffline=false; }, 3000);
+      if(offIcon) offIcon.textContent = '✅';
+      if(offMsg) offMsg.textContent = 'Back online! Syncing messages...';
+      if(offBar){ offBar.classList.add('online'); setTimeout(()=>{ offBar.classList.remove('show'); wasOffline=false; }, 3000); }
     }
   }
 }
@@ -2069,111 +2264,31 @@ window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
 
-// 5. Firebase connection state indicator
-firebase.database().ref('.info/connected').on('value', snap=>{
-  const connected = snap.val();
-  if(connected === false && navigator.onLine){
-    // Firebase disconnected but we have internet (reconnecting)
-    offIcon.textContent = '🔄';
-    offMsg.textContent  = 'Reconnecting to server...';
-    offBar.classList.remove('online');
-    offBar.classList.add('show');
-  } else if(connected === true){
-    if(offBar.classList.contains('show')){
-      offIcon.textContent = '✅';
-      offMsg.textContent  = 'Connected!';
-      offBar.classList.add('online');
-      setTimeout(()=>offBar.classList.remove('show'), 2500);
-    }
-  }
-});
-
-
-// ── OFFLINE / PWA SUPPORT ──
-
-// 1. Register Service Worker for app caching
-if('serviceWorker' in navigator){
-  const SW_CODE = `
-const CACHE = 'raychat-v1';
-const ASSETS = [
-  '/',
-  '/index.html'
-];
-self.addEventListener('install', e=>{
-  e.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS).catch(()=>{})));
-  self.skipWaiting();
-});
-self.addEventListener('activate', e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-  self.clients.claim();
-});
-self.addEventListener('fetch', e=>{
-  if(e.request.method!=='GET') return;
-  if(e.request.url.includes('firebase')||e.request.url.includes('googleapis')) return;
-  e.respondWith(
-    fetch(e.request).then(res=>{
-      const clone=res.clone();
-      caches.open(CACHE).then(cache=>cache.put(e.request,clone));
-      return res;
-    }).catch(()=>caches.match(e.request).then(r=>r||new Response('Offline',{status:503})))
-  );
-});
-  `;
-  try{
-    const blob=new Blob([SW_CODE],{type:'application/javascript'});
-    const url=URL.createObjectURL(blob);
-    navigator.serviceWorker.register(url).catch(()=>{});
-  }catch(e){}
-}
-
-// 2. Firebase offline persistence — queues writes when offline
-try{ firebase.database().goOnline(); }catch(e){}
-
-// 3. Online/offline detection
+// 5. Offline banner (second banner element)
 let isOnline = navigator.onLine;
 let pendingMsgs = [];
 
-function updateOnlineStatus(online){
+function updateBannerStatus(online){
   isOnline = online;
-  const banner  = document.getElementById('offline-banner');
-  const dot     = document.getElementById('banner-dot');
-  const txt     = document.getElementById('banner-text');
+  const banner = document.getElementById('offline-banner');
+  const dot    = document.getElementById('banner-dot');
+  const txt    = document.getElementById('banner-text');
+  if(!banner) return;
   if(!online){
-    dot.className  = 'offline-dot';
-    txt.textContent = '📡 You're offline — messages will send when reconnected';
+    if(dot) dot.className = 'offline-dot';
+    if(txt) txt.textContent = "📡 You're offline — messages will send when reconnected";
     banner.classList.add('show');
   } else {
-    dot.className  = 'online-dot-banner';
-    txt.textContent = '✓ Back online! Syncing messages...';
+    if(dot) dot.className = 'online-dot-banner';
+    if(txt) txt.textContent = '✓ Back online! Syncing messages...';
     banner.classList.add('show');
     setTimeout(()=>banner.classList.remove('show'), 2500);
-    // Flush pending local msgs
     flushPendingMsgs();
   }
 }
 
-window.addEventListener('online',  ()=>updateOnlineStatus(true));
-window.addEventListener('offline', ()=>updateOnlineStatus(false));
-
-// 4. Firebase connection state
-const connRef = firebase.database().ref('.info/connected');
-connRef.on('value', snap=>{
-  const connected = snap.val();
-  // Update connection dots in chat header
-  const chst = document.getElementById('chst');
-  if(chst){
-    chst.textContent = connected ? '● Online' : '○ Offline';
-    chst.style.color = connected ? 'var(--green)' : 'var(--danger)';
-  }
-});
-
-// 5. Keep important data synced for offline reading
-function enableOfflineSync(uid){
-  try{
-    firebase.database().ref('userChats/'+uid).keepSynced(true);
-    firebase.database().ref('users').keepSynced(true);
-  }catch(e){}
-}
+window.addEventListener('online',  ()=>updateBannerStatus(true));
+window.addEventListener('offline', ()=>updateBannerStatus(false));
 
 // 6. Message queue for offline sending
 function flushPendingMsgs(){
@@ -2181,10 +2296,9 @@ function flushPendingMsgs(){
   const toSend = [...pendingMsgs];
   pendingMsgs = [];
   toSend.forEach(({chatId, msg})=>{
-    firebase.database().ref('messages/'+chatId).push(msg);
+    db.ref('messages/'+chatId).push(msg);
     chatId.split('_').forEach(uid=>
-      firebase.database().ref('userChats/'+uid+'/'+chatId)
-        .update({lastMsg:msg.text||msg.type,lastTime:msg.time})
+      db.ref('userChats/'+uid+'/'+chatId).update({lastMsg:msg.text||msg.type,lastTime:msg.time})
     );
   });
   toast('✓ '+toSend.length+' message(s) sent!');
@@ -2196,12 +2310,10 @@ window.sendMsg = function(){
   const ta=$('msgta'), text=ta.value.trim();
   if(!text||!ACT_CID||!ME) return;
   ta.value=''; ta.style.height='auto';
-  firebase.database().ref('typing/'+ACT_CID+'/'+ME.uid).remove();
+  db.ref('typing/'+ACT_CID+'/'+ME.uid).remove();
   const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],sp:ME.photo||null,time:Date.now(),seen:false};
   if(!isOnline){
-    // Queue locally, show optimistically
     pendingMsgs.push({chatId:ACT_CID, msg});
-    // Show pending message in UI immediately
     const el=$('msgs');
     if(el){
       const div=document.createElement('div');
@@ -2213,9 +2325,9 @@ window.sendMsg = function(){
     toast('📡 Offline — will send when reconnected');
     return;
   }
-  firebase.database().ref('messages/'+ACT_CID).push(msg);
+  db.ref('messages/'+ACT_CID).push(msg);
   ACT_CID.split('_').forEach(uid=>
-    firebase.database().ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:msg.time})
+    db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:msg.time})
   );
 };
 

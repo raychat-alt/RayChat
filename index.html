@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>RayChat</title>
+<meta name="theme-color" content="#080a0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RayChat">
+<link rel="manifest" href="data:application/json,{%22name%22:%22RayChat%22,%22short_name%22:%22RayChat%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23080a0f%22,%22theme_color%22:%22%2300e5c8%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23080a0f'/%3E%3Ctext y='.9em' font-size='75' x='12'%3E%F0%9F%92%AC%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22}]}">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -339,6 +345,60 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 
 
 
+
+
+/* ── OFFLINE INDICATOR ── */
+.offline-bar{position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 18px;background:var(--warn);color:#000;font-size:13px;font-weight:600;text-align:center;transform:translateY(-100%);transition:transform .3s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;justify-content:center;gap:8px;}
+.offline-bar.show{transform:translateY(0);}
+.offline-bar.online{background:var(--green);color:#fff;}
+.msg-pending{opacity:.55;}
+.msg-pending .mtime::after{content:' · sending...';font-style:italic;}
+
+
+/* ── OFFLINE / PWA ── */
+.offline-banner{position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text);transform:translateY(-100%);transition:transform .3s cubic-bezier(.16,1,.3,1);}
+.offline-banner.show{transform:translateY(0);}
+.offline-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:blink .8s ease infinite;flex-shrink:0;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.online-dot-banner{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.conn-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-left:auto;flex-shrink:0;}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+.conn-dot.off{background:var(--danger);}
+/* Pending msg indicator */
+.pending-badge{display:none;position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--warn);border-radius:50%;font-size:9px;font-weight:700;color:#000;align-items:center;justify-content:center;}
+.pending-badge.show{display:flex;}
+/* Message pending state */
+.msg-pending{opacity:.65;}
+.msg-pending .mtime::after{content:' ⏳';font-size:9px;}
+/* Offline cached message */
+.msg-cached .mbub{border-style:dashed !important;}
+
+/* ── PHONE AUTH ── */
+.auth-or{display:flex;align-items:center;gap:10px;margin:16px 0;}
+.auth-or::before,.auth-or::after{content:'';flex:1;height:1px;background:var(--border2);}
+.auth-or span{font-size:12px;color:var(--muted);}
+.phone-input-row{display:flex;gap:6px;}
+.country-select{background:var(--surface2);border:1px solid var(--border2);border-radius:11px;padding:12px 10px;color:var(--text);font-size:14px;outline:none;width:100px;flex-shrink:0;cursor:pointer;transition:border-color .2s;appearance:none;text-align:center;}
+.country-select:focus{border-color:var(--accent);}
+.phone-num-inp{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s;}
+.phone-num-inp:focus{border-color:var(--accent);}
+.phone-num-inp::placeholder{color:var(--muted);}
+/* OTP screen */
+#s-otp{align-items:center;justify-content:center;background:var(--bg);}
+.otp-card{width:420px;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:44px 40px;animation:cardIn .5s cubic-bezier(.16,1,.3,1) both;}
+.otp-icon{font-size:48px;margin-bottom:14px;animation:bounce 1.2s ease infinite;}
+.otp-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;}
+.otp-sub{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:6px;}
+.otp-phone-shown{color:var(--accent);font-weight:600;font-size:14px;margin-bottom:22px;}
+.otp-inputs{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
+.otp-digit{width:46px;height:56px;background:var(--surface2);border:2px solid var(--border2);border-radius:12px;color:var(--text);font-size:22px;font-weight:700;text-align:center;outline:none;transition:border-color .2s,transform .1s;}
+.otp-digit:focus{border-color:var(--accent);transform:scale(1.05);}
+.resend-row{text-align:center;font-size:13px;color:var(--muted);margin-top:12px;}
+.resend-link{color:var(--accent);cursor:pointer;text-decoration:underline;}
+.resend-timer{color:var(--muted);}
+/* reCAPTCHA container */
+#recaptcha-container{margin-top:10px;}
+
 /* ── MEDIA / STICKERS ── */
 .attach-btn{width:44px;height:44px;min-width:44px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;color:var(--muted);font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
 .attach-btn:hover{color:var(--accent);border-color:var(--accent);}
@@ -448,6 +508,12 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 </head>
 <body>
 
+<!-- OFFLINE BAR -->
+<div class="offline-bar" id="offline-bar">
+  <span id="offline-icon">📡</span>
+  <span id="offline-msg">You are offline — messages will be sent when reconnected</span>
+</div>
+
 <!-- LOADING -->
 <div class="screen active" id="s-load">
   <div class="ld-logo">Ray<span>Chat</span></div>
@@ -488,6 +554,43 @@ input,textarea{font-family:'DM Sans',sans-serif;}
       <button class="btnp" onclick="doForgot()">Send Reset Email →</button>
       <div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer" onclick="atab('login')">← Back to Sign In</div>
     </div>
+    <!-- Phone number form -->
+    <div id="af-phone" style="display:none">
+      <div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;margin-bottom:5px">Phone Login 📱</div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:20px">Enter your phone number to receive OTP</div>
+      <div class="fg">
+        <label>Phone Number</label>
+        <div class="phone-input-row">
+          <select class="country-select" id="country-code">
+            <option value="+880">🇧🇩 +880</option>
+            <option value="+91">🇮🇳 +91</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+61">🇦🇺 +61</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+966">🇸🇦 +966</option>
+            <option value="+60">🇲🇾 +60</option>
+            <option value="+65">🇸🇬 +65</option>
+            <option value="+49">🇩🇪 +49</option>
+            <option value="+33">🇫🇷 +33</option>
+            <option value="+81">🇯🇵 +81</option>
+            <option value="+82">🇰🇷 +82</option>
+            <option value="+86">🇨🇳 +86</option>
+            <option value="+55">🇧🇷 +55</option>
+            <option value="+92">🇵🇰 +92</option>
+          </select>
+          <input class="phone-num-inp" type="tel" id="phone-number" placeholder="01XXXXXXXXX">
+        </div>
+      </div>
+      <button class="btnp" onclick="sendOTP()">Send OTP →</button>
+      <div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer" onclick="hidePhoneAuth()">← Back to Email Login</div>
+    </div>
+    <!-- OR divider + phone login -->
+    <div class="auth-or"><span>or</span></div>
+    <button class="btnp" onclick="showPhoneAuth()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:8px">
+      📱 Continue with Phone Number
+    </button>
+    <div id="recaptcha-container"></div>
     <div class="errtxt" id="a-err"></div>
     <div class="ok-txt" id="a-ok"></div>
   </div>
@@ -793,6 +896,39 @@ input,textarea{font-family:'DM Sans',sans-serif;}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- OFFLINE BANNER -->
+<div class="offline-banner" id="offline-banner">
+  <div class="offline-dot" id="banner-dot"></div>
+  <span id="banner-text">You're offline — messages will send when reconnected</span>
+</div>
+
+<!-- OTP VERIFICATION -->
+<div class="screen" id="s-otp">
+  <div class="abg"></div>
+  <div class="otp-card">
+    <div class="otp-icon">📱</div>
+    <div class="otp-title">Verify Your Number</div>
+    <div class="otp-sub">We sent a 6-digit code to</div>
+    <div class="otp-phone-shown" id="otp-phone-shown">+880 1234567890</div>
+    <div class="otp-inputs">
+      <input class="otp-digit" maxlength="1" type="tel" id="od0" oninput="otpInput(0)">
+      <input class="otp-digit" maxlength="1" type="tel" id="od1" oninput="otpInput(1)">
+      <input class="otp-digit" maxlength="1" type="tel" id="od2" oninput="otpInput(2)">
+      <input class="otp-digit" maxlength="1" type="tel" id="od3" oninput="otpInput(3)">
+      <input class="otp-digit" maxlength="1" type="tel" id="od4" oninput="otpInput(4)">
+      <input class="otp-digit" maxlength="1" type="tel" id="od5" oninput="otpInput(5)">
+    </div>
+    <button class="btnp" onclick="verifyOTP()">Verify & Continue →</button>
+    <div class="errtxt" id="otp-err"></div>
+    <div class="resend-row">
+      Didn't receive it?
+      <span class="resend-link" id="resend-link" onclick="resendOTP()" style="display:none">Resend OTP</span>
+      <span class="resend-timer" id="resend-timer">Resend in 30s</span>
+    </div>
+    <div style="text-align:center;margin-top:14px;font-size:13px;color:var(--muted);cursor:pointer" onclick="show('s-auth')">← Change number</div>
+  </div>
+</div>
+
 <!-- HIDDEN FILE INPUTS -->
 <input type="file" id="inp-img" accept="image/*" style="display:none" onchange="uploadMedia(event,'image')">
 <input type="file" id="inp-vid" accept="video/*" style="display:none" onchange="uploadMedia(event,'video')">
@@ -866,8 +1002,9 @@ initPicker();
 // AUTH STATE
 auth.onAuthStateChanged(async user=>{
   if(user){
-    // Check email verified
-    if(!user.emailVerified){
+    // Skip email verification for phone auth users
+    const isPhoneUser = user.providerData.some(p=>p.providerId==='phone');
+    if(!isPhoneUser && !user.emailVerified){
       $('verify-email-shown').textContent=user.email;
       show('s-verify'); return;
     }
@@ -1011,7 +1148,8 @@ function doSetName(){
   if(!name){$('sn-err').textContent='Enter your name.';return;}
   const u=auth.currentUser;
   u.updateProfile({displayName:name}).then(()=>{
-    db.ref('users/'+u.uid).set({uid:u.uid,email:u.email,name,emoji:'😎',color:COLORS[0],bio:'',twoFA:false}).then(()=>{cEmoji='😎';cColor=COLORS[0];initPicker();show('s-pf');});
+    const emailOrPhone = u.email || u.phoneNumber || '';
+    db.ref('users/'+u.uid).set({uid:u.uid,email:emailOrPhone,phone:u.phoneNumber||'',name,emoji:'😎',color:COLORS[0],bio:'',twoFA:false}).then(()=>{cEmoji='😎';cColor=COLORS[0];initPicker();show('s-pf');});
   });
 }
 window.doSetName=doSetName;
@@ -1031,7 +1169,7 @@ function enterApp(){
   const dot=document.createElement('div');dot.className='medot';av.appendChild(dot);
   $('me-nm').textContent=ME.name||'You';
   show('s-app');
-  listenChats(); listenCalls(); listenFriendRequests();
+  listenChats(); listenCalls(); listenFriendRequests(); enableOfflineSync(ME.uid); enableOfflineSync(ME.uid);
   // Update 2FA toggle
   const tog=$('tfa-toggle');
   if(tog) tog.classList.toggle('on',!!ME.twoFA);
@@ -1210,7 +1348,9 @@ function sendMsg(){
   // Clear typing
   db.ref('typing/'+ACT_CID+'/'+ME.uid).remove();
   const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],sp:ME.photo||null,time:Date.now(),seen:false};
-  db.ref('messages/'+ACT_CID).push(msg);
+  const msgRef = db.ref('messages/'+ACT_CID).push();
+  msgRef.set({...msg, pending:true});
+  msgRef.set(msg); // Firebase queues this offline automatically
   ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:Date.now()}));
 }
 window.sendMsg=sendMsg;
@@ -1696,6 +1836,349 @@ async function compressImage(file){
 function openLightbox(src){ const lb=document.getElementById('lightbox'); document.getElementById('lightbox-img').src=src; lb.classList.add('open'); }
 function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
 window.openLightbox=openLightbox; window.closeLightbox=closeLightbox;
+
+
+// ── PHONE AUTH ──
+let confirmationResult = null;
+let recaptchaVerifier   = null;
+let resendCountdown     = null;
+let otpPending          = false;
+
+function showPhoneAuth(){
+  document.getElementById('af-l').style.display   = 'none';
+  document.getElementById('af-r').style.display   = 'none';
+  document.getElementById('af-fw').style.display  = 'none';
+  document.getElementById('af-phone').style.display = 'block';
+  document.getElementById('a-err').textContent = '';
+  document.getElementById('a-ok').textContent  = '';
+  // Hide tab buttons
+  document.querySelector('.atabs').style.display = 'none';
+}
+function hidePhoneAuth(){
+  document.getElementById('af-phone').style.display = 'none';
+  document.querySelector('.atabs').style.display = '';
+  atab('login');
+}
+window.showPhoneAuth = showPhoneAuth;
+window.hidePhoneAuth = hidePhoneAuth;
+
+function initRecaptcha(){
+  try{
+    if(recaptchaVerifier) recaptchaVerifier.clear();
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container',{
+      size: 'invisible',
+      callback: () => {}
+    });
+  } catch(e){ console.error('reCAPTCHA error:', e); }
+}
+
+async function sendOTP(){
+  const code   = document.getElementById('country-code').value;
+  const num    = document.getElementById('phone-number').value.trim().replace(/[^0-9]/g,'');
+  const err    = document.getElementById('a-err');
+  const ok     = document.getElementById('a-ok');
+  err.textContent = ''; ok.textContent = '';
+
+  if(!num || num.length < 6){ err.textContent = 'Enter a valid phone number.'; return; }
+
+  // Format number: remove leading 0 if Bangladesh etc.
+  let phone = code + (num.startsWith('0') ? num.slice(1) : num);
+  err.textContent = 'Sending OTP...';
+
+  try{
+    initRecaptcha();
+    confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, recaptchaVerifier);
+    err.textContent = '';
+    // Show OTP screen
+    document.getElementById('otp-phone-shown').textContent = phone;
+    // Clear OTP digits
+    for(let i=0;i<6;i++) document.getElementById('od'+i).value='';
+    document.getElementById('otp-err').textContent = '';
+    show('s-otp');
+    document.getElementById('od0').focus();
+    startResendTimer();
+    otpPending = true;
+  } catch(e){
+    err.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,'').trim();
+    try{ recaptchaVerifier.clear(); }catch(x){}
+    recaptchaVerifier = null;
+  }
+}
+window.sendOTP = sendOTP;
+
+function otpInput(i){
+  const val = document.getElementById('od'+i).value;
+  if(val && i < 5) document.getElementById('od'+(i+1)).focus();
+  // Auto verify when all 6 filled
+  const code = [0,1,2,3,4,5].map(j=>document.getElementById('od'+j).value).join('');
+  if(code.length === 6) verifyOTP();
+}
+window.otpInput = otpInput;
+
+// Backspace handling for OTP
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Backspace'){
+    for(let i=5;i>=0;i--){
+      const el=document.getElementById('od'+i);
+      if(el && document.activeElement===el && !el.value && i>0){ document.getElementById('od'+(i-1)).focus(); break; }
+    }
+  }
+  // Also handle 2FA backspace (already had tfa, keeping od for otp)
+});
+
+async function verifyOTP(){
+  if(!confirmationResult){ document.getElementById('otp-err').textContent='Session expired. Go back and try again.'; return; }
+  const code = [0,1,2,3,4,5].map(i=>document.getElementById('od'+i).value).join('');
+  if(code.length !== 6){ document.getElementById('otp-err').textContent = 'Enter all 6 digits.'; return; }
+  document.getElementById('otp-err').textContent = 'Verifying...';
+  try{
+    await confirmationResult.confirm(code);
+    // onAuthStateChanged will handle the rest
+    document.getElementById('otp-err').textContent = '';
+    clearResendTimer();
+  } catch(e){
+    document.getElementById('otp-err').textContent = 'Wrong code. Try again.';
+    // Clear digits
+    for(let i=0;i<6;i++) document.getElementById('od'+i).value='';
+    document.getElementById('od0').focus();
+  }
+}
+window.verifyOTP = verifyOTP;
+
+async function resendOTP(){
+  document.getElementById('resend-link').style.display = 'none';
+  document.getElementById('resend-timer').style.display = '';
+  // Re-send by going back to phone form
+  show('s-auth');
+  showPhoneAuth();
+  await sendOTP();
+}
+window.resendOTP = resendOTP;
+
+function startResendTimer(){
+  let secs = 30;
+  const timerEl  = document.getElementById('resend-timer');
+  const linkEl   = document.getElementById('resend-link');
+  timerEl.style.display = '';
+  linkEl.style.display  = 'none';
+  timerEl.textContent   = 'Resend in '+secs+'s';
+  clearResendTimer();
+  resendCountdown = setInterval(()=>{
+    secs--;
+    if(secs <= 0){
+      clearResendTimer();
+      timerEl.style.display = 'none';
+      linkEl.style.display  = 'inline';
+    } else {
+      timerEl.textContent = 'Resend in '+secs+'s';
+    }
+  }, 1000);
+}
+function clearResendTimer(){
+  if(resendCountdown){ clearInterval(resendCountdown); resendCountdown=null; }
+}
+
+// Handle phone users in onAuthStateChanged
+// Phone users may not have emailVerified, so we skip that check for them
+
+
+// ── OFFLINE SUPPORT ──
+
+// 1. Firebase RTDB offline persistence (caches data & queues writes)
+try { firebase.database().setPersistenceEnabled(true); } catch(e) {}
+
+// 2. Keep important refs synced for offline access
+function enableOfflineSync(uid){
+  try{
+    firebase.database().ref('userChats/'+uid).keepSynced(true);
+    firebase.database().ref('users').keepSynced(true);
+    firebase.database().ref('friends/'+uid).keepSynced(true);
+  } catch(e){}
+}
+
+// 3. Register Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(reg=>{
+    console.log('SW registered');
+  }).catch(e=>console.log('SW failed:', e));
+}
+
+// 4. Online / Offline indicator
+const offBar   = document.getElementById('offline-bar');
+const offIcon  = document.getElementById('offline-icon');
+const offMsg   = document.getElementById('offline-msg');
+let wasOffline = false;
+
+function updateOnlineStatus(){
+  if(!navigator.onLine){
+    wasOffline = true;
+    offIcon.textContent  = '📡';
+    offMsg.textContent   = 'You are offline — messages will send when reconnected';
+    offBar.classList.remove('online');
+    offBar.classList.add('show');
+  } else {
+    if(wasOffline){
+      offIcon.textContent = '✅';
+      offMsg.textContent  = 'Back online! Syncing messages...';
+      offBar.classList.add('online');
+      setTimeout(()=>{ offBar.classList.remove('show'); wasOffline=false; }, 3000);
+    }
+  }
+}
+
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// 5. Firebase connection state indicator
+firebase.database().ref('.info/connected').on('value', snap=>{
+  const connected = snap.val();
+  if(connected === false && navigator.onLine){
+    // Firebase disconnected but we have internet (reconnecting)
+    offIcon.textContent = '🔄';
+    offMsg.textContent  = 'Reconnecting to server...';
+    offBar.classList.remove('online');
+    offBar.classList.add('show');
+  } else if(connected === true){
+    if(offBar.classList.contains('show')){
+      offIcon.textContent = '✅';
+      offMsg.textContent  = 'Connected!';
+      offBar.classList.add('online');
+      setTimeout(()=>offBar.classList.remove('show'), 2500);
+    }
+  }
+});
+
+
+// ── OFFLINE / PWA SUPPORT ──
+
+// 1. Register Service Worker for app caching
+if('serviceWorker' in navigator){
+  const SW_CODE = `
+const CACHE = 'raychat-v1';
+const ASSETS = [
+  '/',
+  '/index.html'
+];
+self.addEventListener('install', e=>{
+  e.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS).catch(()=>{})));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e=>{
+  if(e.request.method!=='GET') return;
+  if(e.request.url.includes('firebase')||e.request.url.includes('googleapis')) return;
+  e.respondWith(
+    fetch(e.request).then(res=>{
+      const clone=res.clone();
+      caches.open(CACHE).then(cache=>cache.put(e.request,clone));
+      return res;
+    }).catch(()=>caches.match(e.request).then(r=>r||new Response('Offline',{status:503})))
+  );
+});
+  `;
+  try{
+    const blob=new Blob([SW_CODE],{type:'application/javascript'});
+    const url=URL.createObjectURL(blob);
+    navigator.serviceWorker.register(url).catch(()=>{});
+  }catch(e){}
+}
+
+// 2. Firebase offline persistence — queues writes when offline
+try{ firebase.database().goOnline(); }catch(e){}
+
+// 3. Online/offline detection
+let isOnline = navigator.onLine;
+let pendingMsgs = [];
+
+function updateOnlineStatus(online){
+  isOnline = online;
+  const banner  = document.getElementById('offline-banner');
+  const dot     = document.getElementById('banner-dot');
+  const txt     = document.getElementById('banner-text');
+  if(!online){
+    dot.className  = 'offline-dot';
+    txt.textContent = '📡 You're offline — messages will send when reconnected';
+    banner.classList.add('show');
+  } else {
+    dot.className  = 'online-dot-banner';
+    txt.textContent = '✓ Back online! Syncing messages...';
+    banner.classList.add('show');
+    setTimeout(()=>banner.classList.remove('show'), 2500);
+    // Flush pending local msgs
+    flushPendingMsgs();
+  }
+}
+
+window.addEventListener('online',  ()=>updateOnlineStatus(true));
+window.addEventListener('offline', ()=>updateOnlineStatus(false));
+
+// 4. Firebase connection state
+const connRef = firebase.database().ref('.info/connected');
+connRef.on('value', snap=>{
+  const connected = snap.val();
+  // Update connection dots in chat header
+  const chst = document.getElementById('chst');
+  if(chst){
+    chst.textContent = connected ? '● Online' : '○ Offline';
+    chst.style.color = connected ? 'var(--green)' : 'var(--danger)';
+  }
+});
+
+// 5. Keep important data synced for offline reading
+function enableOfflineSync(uid){
+  try{
+    firebase.database().ref('userChats/'+uid).keepSynced(true);
+    firebase.database().ref('users').keepSynced(true);
+  }catch(e){}
+}
+
+// 6. Message queue for offline sending
+function flushPendingMsgs(){
+  if(!pendingMsgs.length) return;
+  const toSend = [...pendingMsgs];
+  pendingMsgs = [];
+  toSend.forEach(({chatId, msg})=>{
+    firebase.database().ref('messages/'+chatId).push(msg);
+    chatId.split('_').forEach(uid=>
+      firebase.database().ref('userChats/'+uid+'/'+chatId)
+        .update({lastMsg:msg.text||msg.type,lastTime:msg.time})
+    );
+  });
+  toast('✓ '+toSend.length+' message(s) sent!');
+}
+
+// Override sendMsg to handle offline
+const _origSendMsg = sendMsg;
+window.sendMsg = function(){
+  const ta=$('msgta'), text=ta.value.trim();
+  if(!text||!ACT_CID||!ME) return;
+  ta.value=''; ta.style.height='auto';
+  firebase.database().ref('typing/'+ACT_CID+'/'+ME.uid).remove();
+  const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],sp:ME.photo||null,time:Date.now(),seen:false};
+  if(!isOnline){
+    // Queue locally, show optimistically
+    pendingMsgs.push({chatId:ACT_CID, msg});
+    // Show pending message in UI immediately
+    const el=$('msgs');
+    if(el){
+      const div=document.createElement('div');
+      div.className='mrow sent msg-pending';
+      div.innerHTML='<div class="mwrap"><div class="mbub" style="background:var(--sent);color:#000;border-radius:16px;border-bottom-right-radius:4px;padding:10px 14px;font-size:14px">'+esc(text)+'</div><div class="mtime-row"><span class="mtime">'+new Date(msg.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span><span class="tick">✓</span></div></div>';
+      el.appendChild(div);
+      el.scrollTop=el.scrollHeight;
+    }
+    toast('📡 Offline — will send when reconnected');
+    return;
+  }
+  firebase.database().ref('messages/'+ACT_CID).push(msg);
+  ACT_CID.split('_').forEach(uid=>
+    firebase.database().ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:msg.time})
+  );
+};
 
 // MOBILE KEYBOARD FIX
 if(window.visualViewport){

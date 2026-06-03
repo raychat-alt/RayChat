@@ -14,7 +14,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 <style>
 :root{
   --bg:#080a0f;--surface:#0e1118;--surface2:#161b26;--surface3:#1e2436;
@@ -952,7 +951,6 @@ firebase.initializeApp({
 });
 const auth    = firebase.auth();
 const db      = firebase.database();
-const storage = firebase.storage();
 
 // STATE
 let ME=null, ACT_CID=null, ACT_OTHER=null;
@@ -1325,11 +1323,14 @@ function renderMsgs(msgs){
     if(m.type==='sticker'){
       bub=`<div class="mbub sticker-msg">${m.sticker}</div>`;
     } else if(m.type==='image'){
-      bub=`<div class="mbub" style="padding:4px;background:transparent;border:none"><img class="msg-img" src="${m.url}" onclick="openLightbox('${m.url}')" loading="lazy"></div>`;
+      const imgSrc=m.dataUrl||m.url||'';
+      bub=`<div class="mbub" style="padding:4px;background:transparent;border:none"><img class="msg-img" src="${imgSrc}" onclick="openLightbox('${imgSrc}')" loading="lazy"></div>`;
     } else if(m.type==='video'){
-      bub=`<div class="mbub" style="padding:4px;background:transparent;border:none"><video class="msg-video" src="${m.url}" controls playsinline></video></div>`;
+      const vidSrc=m.dataUrl||m.url||'';
+      bub=`<div class="mbub" style="padding:4px;background:transparent;border:none"><video class="msg-video" src="${vidSrc}" controls playsinline></video></div>`;
     } else if(m.type==='file'){
-      bub=`<a class="mbub msg-file" href="${m.url}" target="_blank" download="${m.fileName}"><span class="msg-file-ic">📎</span><div class="msg-file-info"><div class="msg-file-name">${esc(m.fileName)}</div><div class="msg-file-size">${m.fileSize||''}</div></div><span style="font-size:14px;opacity:.6">⬇</span></a>`;
+      const fileSrc=m.dataUrl||m.url||'';
+      bub=`<a class="mbub msg-file" href="${fileSrc}" download="${m.fileName||'file'}"><span class="msg-file-ic">📎</span><div class="msg-file-info"><div class="msg-file-name">${esc(m.fileName||'File')}</div><div class="msg-file-size">${m.fileSize||''}</div></div><span style="font-size:14px;opacity:.6">⬇</span></a>`;
     } else if(m.type==='voice'){
       const aid='au'+m.time;
       bub=`<div class="mbub vbub"><button class="vplay" onclick="playV('${aid}',this)">▶</button><div class="vwave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="vdur">${m.dur||'0:00'}</span><audio id="${aid}" style="display:none" src="${m.voiceData||''}"></audio></div>`;
@@ -1760,57 +1761,79 @@ async function uploadMedia(e, type){
   e.target.value='';
   if(!ACT_CID||!ME){alert('Open a chat first.');return;}
 
-  // Size limits
-  const limits={image:10*1024*1024, video:50*1024*1024, file:20*1024*1024};
+  // Size limits (base64 in RTDB)
+  const limits={image:5*1024*1024, video:8*1024*1024, file:3*1024*1024};
+  const limitNames={image:'5MB', video:'8MB', file:'3MB'};
   if(file.size>limits[type]){
-    alert('File too large. Max: '+fmtSize(limits[type]));return;
+    toast('❌ Too large! Max '+limitNames[type]+' for '+type);
+    return;
   }
 
-  // Show progress
   const prog=document.getElementById('upload-progress');
   const fill=document.getElementById('up-fill');
   const lbl=document.getElementById('up-label');
-  prog.classList.add('show'); fill.style.width='0%';
-  lbl.textContent='Uploading '+fmtSize(file.size)+'...';
+  prog.classList.add('show');
+  fill.style.width='10%';
+  lbl.textContent='Processing...';
 
   try{
-    // Compress image if needed
-    let uploadFile=file;
+    let dataUrl='';
+
     if(type==='image'){
-      uploadFile=await compressImage(file);
+      // Compress image
+      fill.style.width='40%'; lbl.textContent='Compressing...';
+      dataUrl = await compressImage(file);
+    } else if(type==='video'){
+      // Read video as base64
+      fill.style.width='40%'; lbl.textContent='Reading video...';
+      dataUrl = await readFileAsBase64(file);
+    } else {
+      // Read file as base64
+      fill.style.width='40%'; lbl.textContent='Reading file...';
+      dataUrl = await readFileAsBase64(file);
     }
 
-    const path='media/'+ACT_CID+'/'+Date.now()+'_'+file.name;
-    const ref=storage.ref(path);
-    const task=ref.put(uploadFile);
+    fill.style.width='80%'; lbl.textContent='Saving...';
 
-    task.on('state_changed',
-      snap=>{
-        const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
-        fill.style.width=pct+'%';
-        lbl.textContent='Uploading '+pct+'%';
-      },
-      err=>{ prog.classList.remove('show'); alert('Upload failed: '+err.message); },
-      async ()=>{
-        const url=await task.snapshot.ref.getDownloadURL();
-        prog.classList.remove('show');
-        const msg={
-          type, url, fileName:file.name, fileSize:fmtSize(file.size),
-          senderId:ME.uid, sn:ME.name, se:ME.emoji||'😎',
-          sc:ME.color||COLORS[0], sp:ME.photo||null,
-          time:Date.now(), seen:false
-        };
-        db.ref('messages/'+ACT_CID).push(msg);
-        const previews={image:'🖼️ Photo',video:'🎬 Video',file:'📎 '+file.name};
-        ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:previews[type],lastTime:Date.now()}));
-      }
+    const msg={
+      type,
+      dataUrl,
+      fileName: file.name,
+      fileSize: fmtSize(file.size),
+      senderId: ME.uid,
+      sn: ME.name,
+      se: ME.emoji||'😎',
+      sc: ME.color||COLORS[0],
+      sp: ME.photo||null,
+      time: Date.now(),
+      seen: false
+    };
+
+    await db.ref('messages/'+ACT_CID).push(msg);
+    const previews={image:'🖼️ Photo',video:'🎬 Video',file:'📎 '+file.name};
+    ACT_CID.split('_').forEach(uid=>
+      db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:previews[type],lastTime:Date.now()})
     );
+
+    fill.style.width='100%';
+    setTimeout(()=>prog.classList.remove('show'), 500);
+
   } catch(err){
     prog.classList.remove('show');
-    alert('Upload failed: '+err.message);
+    toast('❌ Failed: '+err.message);
   }
 }
 window.uploadMedia=uploadMedia;
+
+// Read any file as base64 data URL
+function readFileAsBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=ev=>resolve(ev.target.result);
+    reader.onerror=()=>reject(new Error('Could not read file'));
+    reader.readAsDataURL(file);
+  });
+}
 
 async function compressImage(file){
   return new Promise(resolve=>{
@@ -1818,13 +1841,14 @@ async function compressImage(file){
     reader.onload=ev=>{
       const img=new Image();
       img.onload=()=>{
-        const MAX=1200;
+        const MAX=900;
         let w=img.width, h=img.height;
         if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
         const canvas=document.createElement('canvas');
         canvas.width=w; canvas.height=h;
         canvas.getContext('2d').drawImage(img,0,0,w,h);
-        canvas.toBlob(blob=>resolve(blob||file),'image/jpeg',0.82);
+        // Return as base64 dataURL directly
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
       };
       img.src=ev.target.result;
     };

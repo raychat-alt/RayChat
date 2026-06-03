@@ -883,7 +883,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
     <div style="padding:16px 18px">
       <div class="friends-tabs">
         <button class="ftab on" id="ft-friends" onclick="switchFTab('friends')">Friends</button>
-        <button class="ftab" id="ft-requests" onclick="switchFTab('requests')">Requests<div class="fbadge" id="req-badge"></div></button>
+        <button class="ftab" id="ft-requests" onclick="switchFTab('requests')">Requests<div class="fbadge" id="req-badge-modal"></div></button>
         <button class="ftab" id="ft-find" onclick="switchFTab('find')">Find People</button>
       </div>
       <!-- Friends list -->
@@ -897,7 +897,7 @@ input,textarea{font-family:'DM Sans',sans-serif;}
       <!-- Find People -->
       <div id="fp-find" style="display:none">
         <div class="friend-search">
-          <input type="text" id="find-inp" placeholder="Search by name or email...">
+          <input type="text" id="find-inp-modal" placeholder="Search by name or email...">
           <button onclick="searchPeople()">Search</button>
         </div>
         <div class="friend-list" id="fl-find"><div class="friend-empty">Search for people by name or email.</div></div>
@@ -965,6 +965,8 @@ firebase.initializeApp({
 });
 const auth    = firebase.auth();
 const db      = firebase.database();
+// Must be called before any db.ref() operations
+try { db.setPersistenceEnabled(true); } catch(e) {}
 
 // STATE
 let ME=null, ACT_CID=null, ACT_OTHER=null;
@@ -1128,12 +1130,18 @@ function tfaInput(i){
   if(!val&&i>0){/* backspace handled below */}
 }
 window.tfaInput=tfaInput;
-// Handle backspace in 2FA inputs
+// Handle backspace in 2FA + OTP inputs and Enter key shortcuts
 document.addEventListener('keydown',e=>{
   if(e.key==='Backspace'){
+    // 2FA backspace
     for(let i=5;i>=0;i--){
       const el=$('td'+i);
       if(el&&document.activeElement===el&&!el.value&&i>0){$('td'+(i-1)).focus();break;}
+    }
+    // OTP backspace
+    for(let i=5;i>=0;i--){
+      const el=document.getElementById('od'+i);
+      if(el&&document.activeElement===el&&!el.value&&i>0){document.getElementById('od'+(i-1)).focus();break;}
     }
   }
   if(document.activeElement&&document.activeElement.id==='l-pw'&&e.key==='Enter') doLogin();
@@ -1190,7 +1198,7 @@ function enterApp(){
 function cleanAll(){
   if(msgL){msgL.off();msgL=null;} if(chatsL){chatsL.off();chatsL=null;}
   if(callL){callL.off();callL=null;} if(typingL){typingL.off();typingL=null;}
-  db.ref("friendRequests/"+ME.uid+"/incoming").off();
+  if(ME&&ME.uid) db.ref("friendRequests/"+ME.uid+"/incoming").off();
   stopRingtone();
 }
 
@@ -1364,9 +1372,7 @@ function sendMsg(){
   // Clear typing
   db.ref('typing/'+ACT_CID+'/'+ME.uid).remove();
   const msg={text,senderId:ME.uid,sn:ME.name,se:ME.emoji||'😎',sc:ME.color||COLORS[0],sp:ME.photo||null,time:Date.now(),seen:false};
-  const msgRef = db.ref('messages/'+ACT_CID).push();
-  msgRef.set({...msg, pending:true});
-  msgRef.set(msg); // Firebase queues this offline automatically
+  db.ref('messages/'+ACT_CID).push(msg); // Firebase queues this offline automatically
   ACT_CID.split('_').forEach(uid=>db.ref('userChats/'+uid+'/'+ACT_CID).update({lastMsg:text,lastTime:Date.now()}));
 }
 window.sendMsg=sendMsg;
@@ -1406,7 +1412,7 @@ function handlePhotoUpload(e){
       cPhoto = canvas.toDataURL("image/jpeg", 0.75);
       // Show preview
       const prev = document.getElementById("avprev");
-      prev.innerHTML = "<img src= + cPhoto + ><div class=\"avbadge\">✏️</div>";
+      prev.innerHTML = '<img src="' + cPhoto + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover"><div class="avbadge">✏️</div>';
       prev.style.background = "transparent";
       // Reset file input
       e.target.value = "";
@@ -1954,16 +1960,7 @@ function otpInput(i){
 }
 window.otpInput = otpInput;
 
-// Backspace handling for OTP
-document.addEventListener('keydown', e=>{
-  if(e.key === 'Backspace'){
-    for(let i=5;i>=0;i--){
-      const el=document.getElementById('od'+i);
-      if(el && document.activeElement===el && !el.value && i>0){ document.getElementById('od'+(i-1)).focus(); break; }
-    }
-  }
-  // Also handle 2FA backspace (already had tfa, keeping od for otp)
-});
+// OTP backspace is handled in the unified keydown listener above
 
 async function verifyOTP(){
   if(!confirmationResult){ document.getElementById('otp-err').textContent='Session expired. Go back and try again.'; return; }
@@ -2023,8 +2020,7 @@ function clearResendTimer(){
 
 // ── OFFLINE SUPPORT ──
 
-// 1. Firebase RTDB offline persistence (caches data & queues writes)
-try { firebase.database().setPersistenceEnabled(true); } catch(e) {}
+// 1. Firebase RTDB offline persistence (enabled at startup, before any db.ref calls)
 
 // 2. Keep important refs synced for offline access
 function enableOfflineSync(uid){
@@ -2035,12 +2031,7 @@ function enableOfflineSync(uid){
   } catch(e){}
 }
 
-// 3. Register Service Worker
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(reg=>{
-    console.log('SW registered');
-  }).catch(e=>console.log('SW failed:', e));
-}
+// Service Worker is registered below with inline SW code
 
 // 4. Online / Offline indicator
 const offBar   = document.getElementById('offline-bar');
@@ -2126,21 +2117,20 @@ self.addEventListener('fetch', e=>{
   }catch(e){}
 }
 
-// 2. Firebase offline persistence — queues writes when offline
-try{ firebase.database().goOnline(); }catch(e){}
+// 2. Firebase offline persistence — queues writes when offline (auto-managed)
 
 // 3. Online/offline detection
 let isOnline = navigator.onLine;
 let pendingMsgs = [];
 
-function updateOnlineStatus(online){
+function updateBanner(online){
   isOnline = online;
   const banner  = document.getElementById('offline-banner');
   const dot     = document.getElementById('banner-dot');
   const txt     = document.getElementById('banner-text');
   if(!online){
     dot.className  = 'offline-dot';
-    txt.textContent = '📡 You're offline — messages will send when reconnected';
+    txt.textContent = "📡 You're offline — messages will send when reconnected";
     banner.classList.add('show');
   } else {
     dot.className  = 'online-dot-banner';
@@ -2152,8 +2142,8 @@ function updateOnlineStatus(online){
   }
 }
 
-window.addEventListener('online',  ()=>updateOnlineStatus(true));
-window.addEventListener('offline', ()=>updateOnlineStatus(false));
+window.addEventListener('online',  ()=>updateBanner(true));
+window.addEventListener('offline', ()=>updateBanner(false));
 
 // 4. Firebase connection state
 const connRef = firebase.database().ref('.info/connected');
@@ -2230,5 +2220,8 @@ if(window.visualViewport){
   });
 }
 </script>
+
+<!-- Duplicate phone OTP script removed: sendOTP and recaptcha are handled in the main script above -->
+
 </body>
 </html>

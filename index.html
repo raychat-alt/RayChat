@@ -1123,6 +1123,129 @@ body.light-mode .mrow.received .mbub{background:var(--recv);border-color:var(--b
 </head>
 <body>
 
+<script>
+// Early stubs — prevent "not defined" errors before main script loads
+// These get overwritten by window.atab=atab etc in the main script
+window.atab=function(t){};
+window.showForgot=function(){};
+window.doLogin=function(){};
+window.doRegister=function(){};
+window.doLogout=function(){};
+window.sendMsg=function(){};
+window.openMyPf=function(){};
+window.openOtherPf=function(){};
+window.startCall=function(){};
+window.toggleAttachMenu=function(){};
+window.toggleEmojiPicker=function(){};
+window.toggleGifPanel=function(){};
+window.toggleStickers=function(){};
+window.openPollModal=function(){};
+window.shareLocation=function(){};
+window.shareContact=function(){};
+window.closeAttachMenu=function(){};
+window.toggleMsgSearch=function(){};
+window.toggleMsgFilter=function(){};
+window.jumpToUnread=function(){};
+window.cancelReply=function(){};
+window.cancelEdit=function(){};
+window.dismissPin=function(){};
+window.scrollToPinned=function(){};
+window.closeM=function(id){var el=document.getElementById(id);if(el)el.classList.remove('open');};
+window.openM=function(id){var el=document.getElementById(id);if(el)el.classList.add('open');};
+window.openFriends=function(){};
+window.toggleNcp=function(){};
+window.sbTab=function(){};
+window.goBack=function(){};
+window.ctxReact=function(){};
+window.ctxReply=function(){};
+window.ctxForward=function(){};
+window.ctxCopy=function(){};
+window.ctxBookmark=function(){};
+window.ctxPin=function(){};
+window.ctxEdit=function(){};
+window.ctxSchedule=function(){};
+window.ctxDelete=function(){};
+window.playV=function(){};
+window.openLightbox=function(){};
+window.closeLightbox=function(){};
+window.downloadQR=function(){};
+window.showMyQR=function(){};
+window.openEditProfile=function(){};
+window.cancelEditProfile=function(){};
+window.saveEditProfile=function(){};
+window.selectEpTheme=function(){};
+window.handleTagInput=function(){};
+window.removeEpTag=function(){};
+window.handleCoverUpload=function(){};
+window.insertEmoji=function(){};
+window.searchEmoji=function(){};
+window.setEmojiCat=function(){};
+window.searchGifs=function(){};
+window.sendGif=function(){};
+window.openPollModal=function(){};
+window.addPollOpt=function(){};
+window.removePollOpt=function(){};
+window.sendPoll=function(){};
+window.translateMsg=function(){};
+window.insertMention=function(){};
+window.confirmSchedule=function(){};
+window.cancelScheduled=function(){};
+window.renderScheduled=function(){};
+window.confirmForward=function(){};
+window.toggleFwdChat=function(){};
+window.filterFwdChats=function(){};
+window.loadBookmarks=function(){};
+window.votePoll=function(){};
+window.initGroupModal=function(){};
+window.selectGrpEmoji=function(){};
+window.toggleGrpMember=function(){};
+window.filterGrpMembers=function(){};
+window.createGroup=function(){};
+window.openGroup=function(){};
+window.openGroupInfo=function(){};
+window.leaveGroup=function(){};
+window.viewStory=function(){};
+window.closeStoryViewer=function(){};
+window.nextStory=function(){};
+window.prevStory=function(){};
+window.sendStoryReply=function(){};
+window.initCreateStory=function(){};
+window.storyTab=function(){};
+window.selectStoryBg=function(){};
+window.handleStoryImg=function(){};
+window.postStory=function(){};
+window.initThemeModal=function(){};
+window.toggleDarkLight=function(){};
+window.setAccentColor=function(){};
+window.setWallpaper=function(){};
+window.setBubbleStyle=function(){};
+window.changeFontSize=function(){};
+window.renderNotifications=function(){};
+window.clearAllNotifs=function(){};
+window.markNotifRead=function(){};
+window.hideRichNotif=function(){};
+window.richNotifClick=function(){};
+window.toggleNS=function(){};
+window.toggleDND=function(){};
+window.toggle2FA=function(){};
+window.doSwitch=function(){};
+window.sendOTP=function(){};
+window.verifyOTP=function(){};
+window.useSmartReply=function(){};
+window.filterMsgs=function(){};
+window.searchMessages=function(){};
+window.navMsgSearch=function(){};
+window.showCtxMenu=function(){};
+window.handleMsgTouchStart=function(){};
+window.handleMsgTouchEnd=function(){};
+window.addReaction=function(){};
+window.showGroupCtxMenu=function(){};
+window.addGroupReaction=function(){};
+window.cancelReply=function(){};
+window.cancelEdit=function(){};
+</script>
+
+
 <!-- OFFLINE BAR -->
 <div class="offline-bar" id="offline-bar">
   <span id="offline-icon">📡</span>
@@ -2755,7 +2878,7 @@ function toggleEmojiPicker(){ const p=$('emoji-picker-panel'); if(!p) return; co
 window.insertEmoji=insertEmoji; window.searchEmoji=searchEmoji; window.setEmojiCat=setEmojiCat; window.toggleEmojiPicker=toggleEmojiPicker;
 
 // ── GIF SUPPORT ──
-const GIPHY_KEY='fj5OPhdxDcpV0I8Tt1asuGhWVtuaWnxR'; // Public demo key
+const GIPHY_KEY='dc6zaTOxFJmzC'; // Public demo key
 async function searchGifs(q){
   const grid=$('gif-grid'); if(!grid) return;
   if(!q){ grid.innerHTML='<div class="gif-placeholder" style="grid-column:1/-1;padding:30px;text-align:center;color:var(--muted);font-size:13px">Search for GIFs above</div>'; return; }

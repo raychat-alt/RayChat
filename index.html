@@ -979,6 +979,9 @@ img{display:block;max-width:100%;}
 <input type="file" id="file-vid" accept="video/*" style="display:none" onchange="uploadMedia(event,'video')">
 <input type="file" id="file-doc" style="display:none" onchange="uploadMedia(event,'file')">
 
+<!-- Ringtone audio (Web Audio API generated beep tone as fallback) -->
+<audio id="ringtone-audio" loop></audio>
+
 <script>
 // ═══════════════════════════════════════════════════════
 // RAYCHAT v11 — COMPLETE JAVASCRIPT
@@ -1820,30 +1823,86 @@ function dlLB(){const a=document.createElement('a');a.href=$('lb-img').src;a.dow
 const ICE_CFG={iceServers:[
   {urls:'stun:stun.l.google.com:19302'},
   {urls:'stun:stun1.l.google.com:19302'},
+  {urls:'stun:stun2.l.google.com:19302'},
+  {urls:'stun:stun3.l.google.com:19302'},
 ]};
 let _callPC=null,_callStream=null,callType='audio',_callRef=null,_callRole=null;
 
+// ── RINGTONE SYSTEM ──
+let _ringCtx=null,_ringNodes=[],_ringInterval=null;
+function _startRingtone(){
+  try{
+    _stopRingtone();
+    _ringCtx=new(window.AudioContext||window.webkitAudioContext)();
+    function _beep(){
+      if(!_ringCtx)return;
+      try{
+        const o=_ringCtx.createOscillator();
+        const g=_ringCtx.createGain();
+        o.connect(g);g.connect(_ringCtx.destination);
+        o.type='sine';o.frequency.setValueAtTime(880,_ringCtx.currentTime);
+        g.gain.setValueAtTime(0,_ringCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0.4,_ringCtx.currentTime+0.05);
+        g.gain.setValueAtTime(0.4,_ringCtx.currentTime+0.15);
+        g.gain.linearRampToValueAtTime(0,_ringCtx.currentTime+0.25);
+        o.start(_ringCtx.currentTime);o.stop(_ringCtx.currentTime+0.25);
+        setTimeout(()=>{
+          if(!_ringCtx)return;
+          const o2=_ringCtx.createOscillator();
+          const g2=_ringCtx.createGain();
+          o2.connect(g2);g2.connect(_ringCtx.destination);
+          o2.type='sine';o2.frequency.setValueAtTime(1100,_ringCtx.currentTime);
+          g2.gain.setValueAtTime(0,_ringCtx.currentTime);
+          g2.gain.linearRampToValueAtTime(0.35,_ringCtx.currentTime+0.05);
+          g2.gain.setValueAtTime(0.35,_ringCtx.currentTime+0.15);
+          g2.gain.linearRampToValueAtTime(0,_ringCtx.currentTime+0.25);
+          o2.start(_ringCtx.currentTime);o2.stop(_ringCtx.currentTime+0.25);
+        },350);
+      }catch(e){}
+    }
+    _beep();_ringInterval=setInterval(_beep,1800);
+  }catch(e){console.warn('Ringtone error:',e);}
+}
+function _stopRingtone(){
+  clearInterval(_ringInterval);_ringInterval=null;
+  if(_ringCtx){try{_ringCtx.close();}catch(e){}}_ringCtx=null;
+  _ringNodes=[];
+}
+
 async function startCall(type){
   if(!ACT_OTHER){toast('❌ No active chat');return;}
+  if(!ME){toast('❌ Not logged in');return;}
   const ok=await checkFriendForAction();if(!ok)return;
   // Reset any stale call state from previous call
-  if(_callPC){_callPC.close();_callPC=null;}
+  if(_callPC){try{_callPC.close();}catch(e){}_callPC=null;}
   if(_callStream){_callStream.getTracks().forEach(t=>t.stop());_callStream=null;}
   if(_callRef){_callRef.off();_callRef=null;}
-  db.ref('calls/'+ME.uid+'/callerIce').off();
-  db.ref('calls/'+ME.uid+'/calleeIce').off();
+  try{db.ref('calls/'+ME.uid+'/callerIce').off();}catch(e){}
+  try{db.ref('calls/'+ME.uid+'/calleeIce').off();}catch(e){}
   _isEndingCall=false;
   callType=type;_callRole='caller';
   try{
-    _callStream=await navigator.mediaDevices.getUserMedia({video:type==='video',audio:true});
+    const constraints={audio:{echoCancellation:true,noiseSuppression:true,sampleRate:44100},video:type==='video'?{width:{ideal:640},height:{ideal:480},facingMode:'user'}:false};
+    _callStream=await navigator.mediaDevices.getUserMedia(constraints);
     _showCallUI(ACT_OTHER,'Ringing…',type);
+    _startRingtone();
     // Setup peer connection
     _callPC=new RTCPeerConnection(ICE_CFG);
     _callStream.getTracks().forEach(t=>_callPC.addTrack(t,_callStream));
-    _callPC.ontrack=e=>{$('call-remote').srcObject=e.streams[0];$('call-remote').style.display='block';};
+    _callPC.ontrack=e=>{
+      if(e.streams&&e.streams[0]){
+        const rv=$('call-remote');
+        rv.srcObject=e.streams[0];rv.style.display='block';
+      }
+    };
     _callPC.onicecandidate=e=>{if(e.candidate)db.ref('calls/'+ACT_OTHER.uid+'/callerIce').push(e.candidate.toJSON());};
+    _callPC.oniceconnectionstatechange=()=>{
+      if(_callPC&&(_callPC.iceConnectionState==='disconnected'||_callPC.iceConnectionState==='failed')){
+        toast('📵 Connection lost');endCall();
+      }
+    };
     // Create offer
-    const offer=await _callPC.createOffer();
+    const offer=await _callPC.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:type==='video'});
     await _callPC.setLocalDescription(offer);
     // Clear any stale Firebase data first
     await db.ref('calls/'+ACT_OTHER.uid).remove();
@@ -1856,38 +1915,52 @@ async function startCall(type){
       const d=snap.val();
       if(!d){endCall();return;}
       if(d.answer&&_callPC&&_callPC.signalingState==='have-local-offer'){
-        await _callPC.setRemoteDescription(new RTCSessionDescription(d.answer));
-        $('call-status').textContent='Connected ✅';_startCallTimer();
-        document.querySelectorAll('.call-av-ring,.call-av-ring2').forEach(el=>el.style.animation='none');
+        try{
+          await _callPC.setRemoteDescription(new RTCSessionDescription(d.answer));
+          _stopRingtone();
+          $('call-status').textContent='Connected ✅';_startCallTimer();
+          document.querySelectorAll('.call-av-ring,.call-av-ring2').forEach(el=>el.style.animation='none');
+        }catch(err){console.warn('setRemoteDesc error:',err);}
       }
-      if(d.ended&&!_isEndingCall){endCall();}
+      if(d.ended&&!_isEndingCall){_stopRingtone();endCall();}
     });
     // Listen for callee ICE
     db.ref('calls/'+ACT_OTHER.uid+'/calleeIce').on('child_added',snap=>{
       const c=snap.val();if(c&&_callPC)_callPC.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
     });
-    setTimeout(()=>{if($('call-status')&&$('call-status').textContent==='Ringing…'){toast('📵 No answer');endCall();}},35000);
-  }catch(e){toast('❌ '+(e.message||'Mic/Camera denied'));endCall();}
+    setTimeout(()=>{if($('call-status')&&$('call-status').textContent==='Ringing…'){_stopRingtone();toast('📵 No answer');endCall();}},35000);
+  }catch(e){_stopRingtone();toast('❌ '+(e.message||'Mic/Camera denied'));endCall();}
 }
 
 async function _answerCall(data){
   // Reset any stale state
-  if(_callPC){_callPC.close();_callPC=null;}
+  if(_callPC){try{_callPC.close();}catch(e){}_callPC=null;}
+  _stopRingtone();
   if(_callStream){_callStream.getTracks().forEach(t=>t.stop());_callStream=null;}
   if(_callRef){_callRef.off();_callRef=null;}
-  db.ref('calls/'+ME.uid+'/callerIce').off();
-  db.ref('calls/'+ME.uid+'/calleeIce').off();
+  try{db.ref('calls/'+ME.uid+'/callerIce').off();}catch(e){}
+  try{db.ref('calls/'+ME.uid+'/calleeIce').off();}catch(e){}
   _isEndingCall=false;
   callType=data.type||'audio';_callRole='callee';
   try{
-    _callStream=await navigator.mediaDevices.getUserMedia({video:callType==='video',audio:true});
+    const constraints={audio:{echoCancellation:true,noiseSuppression:true,sampleRate:44100},video:callType==='video'?{width:{ideal:640},height:{ideal:480},facingMode:'user'}:false};
+    _callStream=await navigator.mediaDevices.getUserMedia(constraints);
     // fake ACT_OTHER for UI
     const caller={name:data.fromName,emoji:data.fromEmoji||'😎',grad:data.fromGrad||''};
     _showCallUI(caller,'Connecting…',callType);
     _callPC=new RTCPeerConnection(ICE_CFG);
     _callStream.getTracks().forEach(t=>_callPC.addTrack(t,_callStream));
-    _callPC.ontrack=e=>{$('call-remote').srcObject=e.streams[0];$('call-remote').style.display='block';};
+    _callPC.ontrack=e=>{
+      if(e.streams&&e.streams[0]){
+        const rv=$('call-remote');rv.srcObject=e.streams[0];rv.style.display='block';
+      }
+    };
     _callPC.onicecandidate=e=>{if(e.candidate)db.ref('calls/'+ME.uid+'/calleeIce').push(e.candidate.toJSON());};
+    _callPC.oniceconnectionstatechange=()=>{
+      if(_callPC&&(_callPC.iceConnectionState==='disconnected'||_callPC.iceConnectionState==='failed')){
+        toast('📵 Connection lost');endCall();
+      }
+    };
     await _callPC.setRemoteDescription(new RTCSessionDescription(data.offer));
     const answer=await _callPC.createAnswer();
     await _callPC.setLocalDescription(answer);
@@ -1897,9 +1970,14 @@ async function _answerCall(data){
       const c=snap.val();if(c&&_callPC)_callPC.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
     });
     _callRef=db.ref('calls/'+ME.uid);
-    _callRef.on('value',snap=>{if(!_isEndingCall&&!snap.val())endCall();});
-    setTimeout(()=>{if($('call-status')&&$('call-status').textContent==='Connecting…'){$('call-status').textContent='Connected ✅';_startCallTimer();document.querySelectorAll('.call-av-ring,.call-av-ring2').forEach(el=>el.style.animation='none');}},3000);
-  }catch(e){toast('❌ '+(e.message||'Cannot answer'));endCall();}
+    _callRef.on('value',snap=>{if(!_isEndingCall&&!snap.val())endCall();else if(snap.val()?.ended&&!_isEndingCall)endCall();});
+    setTimeout(()=>{
+      if($('call-status')&&($('call-status').textContent==='Connecting…'||$('call-status').textContent==='Ringing…')){
+        $('call-status').textContent='Connected ✅';_startCallTimer();
+        document.querySelectorAll('.call-av-ring,.call-av-ring2').forEach(el=>el.style.animation='none');
+      }
+    },3000);
+  }catch(e){_stopRingtone();toast('❌ '+(e.message||'Cannot answer'));endCall();}
 }
 
 function _showCallUI(other,status,type){
@@ -1924,6 +2002,7 @@ let _isEndingCall=false;
 function endCall(){
   if(_isEndingCall)return;
   _isEndingCall=true;
+  _stopRingtone();
   if(_callStream){_callStream.getTracks().forEach(t=>t.stop());_callStream=null;}
   if(_callPC){_callPC.close();_callPC=null;}
   db.ref('calls/'+ME.uid+'/callerIce').off();
@@ -1980,8 +2059,23 @@ function toggleMute(){
 function toggleSpk(){
   const btn=$('call-spk-btn');
   const isOn=btn.classList.contains('call-btn-active');
-  if(isOn){btn.classList.remove('call-btn-active');btn.classList.add('call-btn-off');$('ic-spk-on').style.display='block';$('ic-spk-off').style.display='none';$('spk-label').textContent='Speaker';}
-  else{btn.classList.add('call-btn-active');btn.classList.remove('call-btn-off');$('ic-spk-on').style.display='none';$('ic-spk-off').style.display='block';$('spk-label').textContent='Muted';}
+  const remoteVid=$('call-remote');
+  if(isOn){
+    btn.classList.remove('call-btn-active');btn.classList.add('call-btn-off');
+    $('ic-spk-on').style.display='block';$('ic-spk-off').style.display='none';$('spk-label').textContent='Speaker';
+    // Try to route back to earpiece
+    if(remoteVid&&remoteVid.srcObject&&remoteVid.setSinkId){remoteVid.setSinkId('').catch(()=>{});}
+  }else{
+    btn.classList.add('call-btn-active');btn.classList.remove('call-btn-off');
+    $('ic-spk-on').style.display='none';$('ic-spk-off').style.display='block';$('spk-label').textContent='Speaker On';
+    // Route audio to speaker
+    if(remoteVid&&remoteVid.srcObject&&remoteVid.setSinkId){
+      navigator.mediaDevices.enumerateDevices().then(devices=>{
+        const spk=devices.find(d=>d.kind==='audiooutput'&&d.label.toLowerCase().includes('speaker'));
+        if(spk)remoteVid.setSinkId(spk.deviceId).catch(()=>{});
+      }).catch(()=>{});
+    }
+  }
   toast('🔊 Speaker '+(isOn?'off':'on'));
 }
 function toggleVid(){
@@ -1999,6 +2093,7 @@ function flipCamera(){toast('📷 Camera flip not supported in browser');}
 function _showIncomingCall(d){
   const existing=$('incoming-call-ui');
   if(existing)existing.remove();
+  _startRingtone();
   const div=document.createElement('div');
   div.id='incoming-call-ui';
   const callerEmoji=d.fromEmoji||'😎';
@@ -2031,18 +2126,27 @@ function _showIncomingCall(d){
     </div>
   `;
   document.body.appendChild(div);
-  div.querySelector('#inc-accept-btn').onclick=async()=>{div.remove();await _answerCall(d);};
-  div.querySelector('#inc-reject-btn').onclick=()=>{div.remove();db.ref('calls/'+ME.uid).remove();};
-  setTimeout(()=>{if($('incoming-call-ui'))$('incoming-call-ui').remove();},35000);
+  div.querySelector('#inc-accept-btn').onclick=async()=>{_stopRingtone();div.remove();await _answerCall(d);};
+  div.querySelector('#inc-reject-btn').onclick=()=>{_stopRingtone();div.remove();db.ref('calls/'+ME.uid).remove();if(d.from)db.ref('calls/'+d.from+'/ended').set(true);};
+  const autoRemove=setTimeout(()=>{if($('incoming-call-ui')){_stopRingtone();$('incoming-call-ui').remove();}},35000);
+  div._autoRemove=autoRemove;
 }
 
 // Listen for incoming calls
+let _lastCallFrom=null,_lastCallTime=0;
 function _listenIncomingCalls(){
   db.ref('calls/'+ME.uid).on('value',async snap=>{
     const d=snap.val();
-    if(!d||!d.offer||$('call-overlay').classList.contains('on'))return;
-    // Show incoming call prompt
-    // Show nice incoming call UI
+    if(!d||!d.offer)return;
+    // If call overlay already open, ignore
+    if($('call-overlay').classList.contains('on'))return;
+    // If incoming UI already shown, ignore
+    if($('incoming-call-ui'))return;
+    // Deduplicate: ignore if same caller within 3 seconds
+    if(d.from===_lastCallFrom&&Date.now()-_lastCallTime<3000)return;
+    _lastCallFrom=d.from;_lastCallTime=Date.now();
+    // Don't show our own outgoing call as incoming
+    if(d.from===ME.uid)return;
     _showIncomingCall(d);
   });
 }
@@ -2399,12 +2503,18 @@ function openReelAuthorProfile(uid,idx){
   if(ME&&uid===ME.uid){openModal('mo-me');return;}
   db.ref('users/'+uid).once('value').then(snap=>{
     const u=snap.val();if(!u){toast('User not found');return;}
-    // Temporarily set ACT_OTHER for the modal reuse
+    // Temporarily set ACT_OTHER for the modal reuse, restore on close
     const prev=ACT_OTHER;
     ACT_OTHER={...u};
     openOtherProfile();
-    // Restore after modal opens
-    setTimeout(()=>{if(!$('mo-other').classList.contains('on'))ACT_OTHER=prev;},200);
+    const restore=()=>{ACT_OTHER=prev;};
+    const closeBtn=Q('#mo-other .mc-close');
+    if(closeBtn)closeBtn.addEventListener('click',restore,{once:true});
+    // Also restore if modal closed via Escape/backdrop
+    const observer=new MutationObserver(()=>{
+      if(!$('mo-other').classList.contains('on')){ACT_OTHER=prev;observer.disconnect();}
+    });
+    observer.observe($('mo-other'),{attributes:true,attributeFilter:['class']});
   });
 }
 

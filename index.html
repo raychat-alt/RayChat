@@ -480,12 +480,45 @@ img{display:block;max-width:100%;}
 .wp-item:hover,.wp-item.sel{border-color:var(--a);transform:scale(1.05);}
 /* Mobile */
 @media(max-width:700px){
-  .sb{position:fixed;inset:0 auto 0 0;z-index:100;transform:translateX(-100%);}
-  .sb.on{transform:translateX(0);}
-  .mob-back{display:flex!important;}
+  /* Sidebar — full screen drawer */
+  .sb{position:fixed;inset:0 auto 0 0;z-index:100;transform:translateX(-100%);width:88vw;min-width:0;max-width:340px;}
+  .sb.on{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.45);}
+
+  /* Chat area fills full width */
   .ca{width:100%;}
+  .mob-back{display:flex!important;}
+
+  /* Header — tighter on mobile */
+  .chh{padding:8px 10px;min-height:52px;}
+  .chh-acts{gap:4px;}
+  .hb{width:30px;height:30px;font-size:14px;}
+
+  /* Input row — bigger touch targets */
+  .inprow{padding:6px 8px;gap:5px;}
+  .att-btn{width:38px;height:38px;font-size:17px;}
+  .msgta{font-size:15px;padding:8px 12px;}
+  .send-btn,.mic-btn{width:42px;height:42px;font-size:19px;}
+
+  /* Auth card — better fit on small screens */
+  .auth-card{padding:28px 20px;}
+
+  /* Modals — slide up from bottom */
+  .mc{width:100%;max-width:100%;max-height:92vh;border-radius:20px 20px 0 0;position:fixed;bottom:0;left:0;right:0;margin:0;}
+  .mo{align-items:flex-end;}
+
+  /* Reels panel */
   #ca-reels .ri-acts{right:8px;bottom:90px;}
   #ca-reels .ri-info{bottom:18px;left:12px;right:64px;}
+
+  /* Sidebar head compact */
+  .ib{width:28px;height:28px;font-size:13px;}
+  .sb-head{padding:10px 12px 8px;}
+
+  /* Toast — above keyboard area */
+  #toast{bottom:80px;}
+
+  /* Context menus */
+  .ctx-menu{min-width:200px;max-width:90vw;}
 }
 .mob-back{display:none;width:32px;height:32px;background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;}
 </style>
@@ -2223,8 +2256,19 @@ async function submitReel(){
 window.addEventListener('focus',()=>{if(ME)db.ref('users/'+ME.uid+'/status').set('online');});
 window.addEventListener('blur',()=>{if(ME){db.ref('users/'+ME.uid+'/status').set('away');db.ref('users/'+ME.uid+'/lastSeen').set(Date.now());}});
 window.addEventListener('beforeunload',()=>{if(ME){db.ref('users/'+ME.uid+'/status').set('offline');db.ref('users/'+ME.uid+'/lastSeen').set(Date.now());}});
-// Mobile sidebar toggle
+// Mobile sidebar toggle — tap outside to close
 document.addEventListener('click',e=>{if(isMob()&&!e.target.closest('.sb')&&!e.target.closest('.mob-back')&&$('sb')?.classList.contains('on'))$('sb').classList.remove('on');});
+// iOS Safari keyboard — prevent layout jump when keyboard opens
+if('visualViewport' in window){
+  const vvp=window.visualViewport;
+  const onVvpResize=()=>{
+    const app=$('s-app');if(!app)return;
+    app.style.height=vvp.height+'px';
+    app.style.top=vvp.offsetTop+'px';
+  };
+  vvp.addEventListener('resize',onVvpResize);
+  vvp.addEventListener('scroll',onVvpResize);
+}
 // Swipe to reply on mobile
 (function(){let tx=0,tel=null;document.addEventListener('touchstart',e=>{const r=e.target.closest('.mrow');if(r){tx=e.touches[0].clientX;tel=r;}},{passive:true});document.addEventListener('touchend',e=>{if(!tel)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>55){const key=tel.dataset.key;if(key){startReply(key,encodeURIComponent(ME.name),'');tel.style.transition='transform .15s';tel.style.transform='translateX('+(dx>0?'10px':'-10px')+')';setTimeout(()=>tel.style.transform='',200);}}tel=null;},{passive:true});})();
 
@@ -2232,7 +2276,7 @@ document.addEventListener('click',e=>{if(isMob()&&!e.target.closest('.sb')&&!e.t
 // Expose globals
 ['toggleNcp','startChat','sbTab','openReels','closeReels','openMyProfile','saveProfile','doLogin','doSignup','doGoogle','doLogout','sendMsg','toggleAttMenu','toggleEmoji','openGIF','searchGIF','sendGIF','openStickers','sendSticker','openPoll','addPollOpt','sendPoll','shareLocation','uploadMedia','startRec','stopRec','cancelRec','toggleMsgSearch','searchMsgs','navSearch','openLB','closeLB','dlLB','startCall','endCall','toggleMute','toggleSpk','toggleVid','openChatCtx','openChatCtxMenu','togglePinChat','toggleMuteChat','unmuteChat','openChatStats','openWallpaper','setWP','exportChat','clearHistory','acceptReq','rejectReq','loadRequests','loadFriends','searchPeople','chatWithFriend','sendFriendReq','clearReply','startReply','toggleReact','openMsgCtx','votePoll','scrollBottom','openRCS','closeRCS','postRC','openReelUpload','closeReelUpload','onReelFile','reelDrop','submitReel','riTap','riDblTap','riLike','riFollow','riShare','toggleReelSound','toggleTheme','toggleKB','askNotif','dismissNotif','openOtherProfile','uploadPfPhoto','authTab','openReelAuthorProfile','openReelMenu','closeReelCtxMenu','deleteReel','editReelCaption','loadMyReels','deleteMyReel','openReelFromProfile'].forEach(fn=>{if(typeof window[fn]==='undefined'&&typeof eval(fn)!=='undefined'){try{window[fn]=eval(fn);}catch(e){}}});
 // All functions are already in global scope
-console.log('✅ RayChat v11 — Ready!');
+console.log('✅ RayChat — Ready!');
 </script>
 </body>
 </html>

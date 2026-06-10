@@ -383,7 +383,7 @@ img{display:block;max-width:100%;}
 .mc-close{width:30px;height:30px;border-radius:50%;background:var(--s2);border:none;color:var(--tx2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .mc-body{padding:16px 20px;}
 /* Call overlay — WhatsApp style */
-#call-overlay{position:fixed;inset:0;z-index:900;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 0 48px;background:linear-gradient(180deg,#1a2a1a 0%,#0d1a0d 100%);}
+#call-overlay{position:fixed;inset:0;z-index:900;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 0 48px;background:#1a1a2e;}
 #call-overlay.on{display:flex;}
 #call-overlay.video-active{background:#000;}
 .call-top{display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;z-index:2;}
@@ -416,7 +416,7 @@ img{display:block;max-width:100%;}
 #call-local:not([src]):not([srcObject]){display:none!important;}
 /* incoming call */
 #incoming-call-ui{position:fixed;inset:0;z-index:950;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:80px 0 60px;}
-.inc-bg{position:absolute;inset:0;background:linear-gradient(180deg,#1a2a1a 0%,#0d1a0d 100%);z-index:0;}
+.inc-bg{position:absolute;inset:0;background:#1a1a2e;z-index:0;}
 .inc-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;}
 .inc-actions{position:relative;z-index:1;display:flex;gap:60px;align-items:center;justify-content:center;width:100%;}
 .inc-btn-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
@@ -1826,6 +1826,13 @@ let _callPC=null,_callStream=null,callType='audio',_callRef=null,_callRole=null;
 async function startCall(type){
   if(!ACT_OTHER){toast('❌ No active chat');return;}
   const ok=await checkFriendForAction();if(!ok)return;
+  // Reset any stale call state from previous call
+  if(_callPC){_callPC.close();_callPC=null;}
+  if(_callStream){_callStream.getTracks().forEach(t=>t.stop());_callStream=null;}
+  if(_callRef){_callRef.off();_callRef=null;}
+  db.ref('calls/'+ME.uid+'/callerIce').off();
+  db.ref('calls/'+ME.uid+'/calleeIce').off();
+  _isEndingCall=false;
   callType=type;_callRole='caller';
   try{
     _callStream=await navigator.mediaDevices.getUserMedia({video:type==='video',audio:true});
@@ -1838,12 +1845,16 @@ async function startCall(type){
     // Create offer
     const offer=await _callPC.createOffer();
     await _callPC.setLocalDescription(offer);
+    // Clear any stale Firebase data first
+    await db.ref('calls/'+ACT_OTHER.uid).remove();
+    await db.ref('calls/'+ME.uid).remove();
     _callRef=db.ref('calls/'+ACT_OTHER.uid);
     await _callRef.set({from:ME.uid,fromName:ME.name,fromEmoji:ME.emoji||'😎',fromGrad:ME.grad||'',type,cid:ACT_CID,time:Date.now(),offer:{type:offer.type,sdp:offer.sdp}});
     // Listen for answer
     _callRef.on('value',async snap=>{
       if(_isEndingCall)return;
-      const d=snap.val();if(!d)return;
+      const d=snap.val();
+      if(!d){endCall();return;}
       if(d.answer&&_callPC&&_callPC.signalingState==='have-local-offer'){
         await _callPC.setRemoteDescription(new RTCSessionDescription(d.answer));
         $('call-status').textContent='Connected ✅';_startCallTimer();
@@ -1860,6 +1871,13 @@ async function startCall(type){
 }
 
 async function _answerCall(data){
+  // Reset any stale state
+  if(_callPC){_callPC.close();_callPC=null;}
+  if(_callStream){_callStream.getTracks().forEach(t=>t.stop());_callStream=null;}
+  if(_callRef){_callRef.off();_callRef=null;}
+  db.ref('calls/'+ME.uid+'/callerIce').off();
+  db.ref('calls/'+ME.uid+'/calleeIce').off();
+  _isEndingCall=false;
   callType=data.type||'audio';_callRole='callee';
   try{
     _callStream=await navigator.mediaDevices.getUserMedia({video:callType==='video',audio:true});
@@ -1906,26 +1924,28 @@ let _isEndingCall=false;
 function endCall(){
   if(_isEndingCall)return;
   _isEndingCall=true;
-  // Stop all media tracks first
   if(_callStream){_callStream.getTracks().forEach(t=>t.stop());_callStream=null;}
-  // Close peer connection
   if(_callPC){_callPC.close();_callPC=null;}
-  // Remove Firebase listeners BEFORE removing data (prevents re-trigger)
   db.ref('calls/'+ME.uid+'/callerIce').off();
   db.ref('calls/'+ME.uid+'/calleeIce').off();
   if(_callRef){_callRef.off();_callRef=null;}
-  // Signal other side then clean up own node
-  const wasCallerRole=_callRole;
+  const wasRole=_callRole;
   _callRole=null;
-  if(wasCallerRole==='caller'&&ACT_OTHER){
+  if(wasRole==='caller'&&ACT_OTHER){
+    // set ended flag on callee's node so callee detects it
     db.ref('calls/'+ACT_OTHER.uid+'/ended').set(true).then(()=>{
-      setTimeout(()=>db.ref('calls/'+ACT_OTHER.uid).remove(),500);
+      setTimeout(()=>db.ref('calls/'+ACT_OTHER.uid).remove(),800);
     });
-  }else{
+  } else {
+    // callee cutting — set ended flag on caller's node too
+    if(ACT_OTHER){
+      db.ref('calls/'+ACT_OTHER.uid+'/ended').set(true).then(()=>{
+        setTimeout(()=>db.ref('calls/'+ACT_OTHER.uid).remove(),800);
+      });
+    }
     db.ref('calls/'+ME.uid).remove();
   }
   _stopCallTimer();
-  // Hide overlay
   const ov=$('call-overlay');
   ov.classList.remove('on');ov.classList.remove('video-active');
   document.querySelectorAll('.call-av-ring,.call-av-ring2').forEach(el=>el.style.animation='');
@@ -1934,14 +1954,13 @@ function endCall(){
   vl.style.display='none';vr.style.display='none';
   const vc=$('call-vid-ctrl'),fc=$('call-flip-ctrl');
   if(vc)vc.style.display='none';if(fc)fc.style.display='none';
-  // Reset button states
   const mb=$('call-mute-btn');
   if(mb){mb.classList.add('call-btn-off');mb.classList.remove('call-btn-active');
   $('ic-mute-on').style.display='block';$('ic-mute-off').style.display='none';$('mute-label').textContent='Mute';}
   const sb=$('call-spk-btn');
   if(sb){sb.classList.add('call-btn-off');sb.classList.remove('call-btn-active');
   $('ic-spk-on').style.display='block';$('ic-spk-off').style.display='none';$('spk-label').textContent='Speaker';}
-  setTimeout(()=>{_isEndingCall=false;},1000);
+  setTimeout(()=>{_isEndingCall=false;},1500);
 }
 
 
@@ -2520,7 +2539,7 @@ if('visualViewport' in window){
 // Expose globals
 ['toggleNcp','startChat','sbTab','openReels','closeReels','openMyProfile','saveProfile','doLogin','doSignup','doGoogle','doLogout','sendMsg','toggleAttMenu','toggleEmoji','openGIF','searchGIF','sendGIF','openStickers','sendSticker','openPoll','addPollOpt','sendPoll','shareLocation','uploadMedia','startRec','stopRec','cancelRec','toggleMsgSearch','searchMsgs','navSearch','openLB','closeLB','dlLB','startCall','endCall','toggleMute','toggleSpk','toggleVid','flipCamera','openChatCtx','openChatCtxMenu','togglePinChat','toggleMuteChat','unmuteChat','openChatStats','openWallpaper','setWP','exportChat','clearHistory','acceptReq','rejectReq','loadRequests','loadFriends','searchPeople','chatWithFriend','sendFriendReq','clearReply','startReply','toggleReact','openMsgCtx','votePoll','scrollBottom','openRCS','closeRCS','postRC','openReelUpload','closeReelUpload','onReelFile','reelDrop','submitReel','riTap','riDblTap','riLike','riFollow','riShare','toggleReelSound','toggleTheme','toggleKB','askNotif','dismissNotif','openOtherProfile','uploadPfPhoto','authTab','openReelAuthorProfile','openReelMenu','closeReelCtxMenu','deleteReel','editReelCaption','loadMyReels','deleteMyReel','openReelFromProfile'].forEach(fn=>{if(typeof window[fn]==='undefined'&&typeof eval(fn)!=='undefined'){try{window[fn]=eval(fn);}catch(e){}}});
 // All functions are already in global scope
-console.log('✅ RayChat v11 — Ready!');
+console.log('✅ RayChat — Ready!');
 </script>
 </body>
 </html>

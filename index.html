@@ -153,7 +153,7 @@ img{display:block;max-width:100%;}
 
 /* ── CHAT AREA ── */
 .ca{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;position:relative;}
-.ca-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--tx3);}
+.ca-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--tx3);position:relative;}
 .ca-empty-ic{font-size:56px;}
 .ca-empty h3{font-family:var(--font2);font-size:20px;font-weight:800;color:var(--tx);}
 .ca-empty p{font-size:13px;text-align:center;max-width:240px;line-height:1.6;}
@@ -243,7 +243,7 @@ img{display:block;max-width:100%;}
 .rb-text{font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rb-close{background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;}
 /* Input row */
-.inprow{display:flex;align-items:flex-end;gap:6px;padding:8px 10px;background:var(--s1);border-top:1px solid var(--b1);flex-shrink:0;}
+.inprow{display:flex;align-items:flex-end;gap:6px;padding:8px 10px;background:var(--s1);border-top:1px solid var(--b1);flex-shrink:0;position:relative;}
 .att-btn{width:36px;height:36px;background:var(--s2);border:1px solid var(--b2);border-radius:10px;color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;transition:all .15s;}
 .att-btn:hover{color:var(--a);border-color:var(--a);}
 .msgta{flex:1;background:var(--s2);border:1.5px solid var(--b1);border-radius:var(--r2);padding:9px 14px;color:var(--tx);font-size:14px;resize:none;max-height:110px;transition:border-color .2s;line-height:1.45;}
@@ -514,13 +514,25 @@ img{display:block;max-width:100%;}
   .ib{width:28px;height:28px;font-size:13px;}
   .sb-head{padding:10px 12px 8px;}
 
+  /* Hamburger button — only shows on mobile when no chat is open */
+  .mob-menu-btn{display:flex!important;align-items:center;justify-content:center;position:fixed;top:12px;left:12px;width:44px;height:44px;background:var(--a);border:none;border-radius:12px;color:#000;font-size:22px;font-weight:700;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+
   /* Toast — above keyboard area */
   #toast{bottom:80px;}
 
   /* Context menus */
   .ctx-menu{min-width:200px;max-width:90vw;}
+
+  /* Fix panels overflow on small screens — full-width bottom sheets */
+  .att-menu{left:0!important;right:0!important;width:auto!important;bottom:58px!important;border-radius:16px 16px 0 0;padding:14px 10px;}
+  .emoji-panel{left:0!important;right:0!important;width:100%!important;bottom:58px!important;border-radius:16px 16px 0 0;max-height:45vh;}
+  .gif-panel{left:0!important;right:0!important;width:100%!important;bottom:58px!important;border-radius:16px 16px 0 0;max-height:50vh;}
+  .sticker-panel{left:0!important;right:0!important;width:100%!important;bottom:58px!important;border-radius:16px 16px 0 0;max-height:45vh;}
+  .recs-hint{left:0!important;right:0!important;bottom:58px!important;}
+  .mc{overflow-y:auto;}
 }
 .mob-back{display:none;width:32px;height:32px;background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;}
+.mob-menu-btn{display:none;}
 </style>
 </head>
 <body>
@@ -675,6 +687,7 @@ img{display:block;max-width:100%;}
     <div class="ca" id="ca">
       <!-- Empty state -->
       <div class="ca-empty" id="ca-empty">
+        <button class="mob-menu-btn" id="mob-menu-btn" onclick="document.getElementById('sb').classList.add('on')">☰</button>
         <div class="ca-empty-ic">💬</div>
         <h3>Welcome to RayChat</h3>
         <p>Select a chat or start a new conversation</p>
@@ -1135,6 +1148,8 @@ function enterApp(){
   $('s-app').classList.add('on');
   $('s-app').style.display='flex';
   updateMeUI();
+  // Mobile: open sidebar on login so user sees chat list first
+  if(isMob()){$('sb').classList.add('on');}
   listenChats();
   listenRequests();
   listenFriendAccepts();
@@ -2257,7 +2272,7 @@ window.addEventListener('focus',()=>{if(ME)db.ref('users/'+ME.uid+'/status').set
 window.addEventListener('blur',()=>{if(ME){db.ref('users/'+ME.uid+'/status').set('away');db.ref('users/'+ME.uid+'/lastSeen').set(Date.now());}});
 window.addEventListener('beforeunload',()=>{if(ME){db.ref('users/'+ME.uid+'/status').set('offline');db.ref('users/'+ME.uid+'/lastSeen').set(Date.now());}});
 // Mobile sidebar toggle — tap outside to close
-document.addEventListener('click',e=>{if(isMob()&&!e.target.closest('.sb')&&!e.target.closest('.mob-back')&&$('sb')?.classList.contains('on'))$('sb').classList.remove('on');});
+document.addEventListener('click',e=>{if(isMob()&&!e.target.closest('.sb')&&!e.target.closest('.mob-back')&&!e.target.closest('.mob-menu-btn')&&$('sb')?.classList.contains('on'))$('sb').classList.remove('on');});
 // iOS Safari keyboard — prevent layout jump when keyboard opens
 if('visualViewport' in window){
   const vvp=window.visualViewport;
@@ -2276,7 +2291,7 @@ if('visualViewport' in window){
 // Expose globals
 ['toggleNcp','startChat','sbTab','openReels','closeReels','openMyProfile','saveProfile','doLogin','doSignup','doGoogle','doLogout','sendMsg','toggleAttMenu','toggleEmoji','openGIF','searchGIF','sendGIF','openStickers','sendSticker','openPoll','addPollOpt','sendPoll','shareLocation','uploadMedia','startRec','stopRec','cancelRec','toggleMsgSearch','searchMsgs','navSearch','openLB','closeLB','dlLB','startCall','endCall','toggleMute','toggleSpk','toggleVid','openChatCtx','openChatCtxMenu','togglePinChat','toggleMuteChat','unmuteChat','openChatStats','openWallpaper','setWP','exportChat','clearHistory','acceptReq','rejectReq','loadRequests','loadFriends','searchPeople','chatWithFriend','sendFriendReq','clearReply','startReply','toggleReact','openMsgCtx','votePoll','scrollBottom','openRCS','closeRCS','postRC','openReelUpload','closeReelUpload','onReelFile','reelDrop','submitReel','riTap','riDblTap','riLike','riFollow','riShare','toggleReelSound','toggleTheme','toggleKB','askNotif','dismissNotif','openOtherProfile','uploadPfPhoto','authTab','openReelAuthorProfile','openReelMenu','closeReelCtxMenu','deleteReel','editReelCaption','loadMyReels','deleteMyReel','openReelFromProfile'].forEach(fn=>{if(typeof window[fn]==='undefined'&&typeof eval(fn)!=='undefined'){try{window[fn]=eval(fn);}catch(e){}}});
 // All functions are already in global scope
-console.log('✅ RayChat — Ready!');
+console.log('✅ RayChat v11 — Ready!');
 </script>
 </body>
 </html>
